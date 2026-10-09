@@ -1,0 +1,8 @@
+# Versions used for the reported run (Kaggle, Python 3.13)
+numpy==2.1.3
+pandas==2.3.3
+torch>=2.2          # reported run: 2.11.0 (CUDA 12.8); CPU builds also work
+scipy>=1.11
+scikit-learn>=1.3
+matplotlib>=3.8
+jupyter

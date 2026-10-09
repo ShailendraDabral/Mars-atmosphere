@@ -1,0 +1,26 @@
+- Test set: 28 unseen profiles, 330 gap cases (2, 5, 10, 20 km; lower, middle, upper).
+- Lowest overall temperature MAE: EOF (opt. interp.) (2.78 K, 95% CI 2.43–3.15).
+- PINN (reg. fine-tuned): T MAE 3.00 K, P error 1.01 %, n error 1.92 %, 64 % of levels within 2σ of the retrieval.
+- [temperature MAE] PINN significantly better than: ['Gaussian process', 'Hydrostatic int.', 'Linear', 'PCHIP']; significantly worse than: none; no significant difference from: ['EOF (opt. interp.)', 'MLP (fine-tuned)', 'MLP (reg. fine-tuned)', 'MLP (zero-shot)', 'PINN (fine-tuned)', 'PINN (zero-shot)', 'Random forest'].
+- [pressure error] PINN significantly better than: ['EOF (opt. interp.)', 'Gaussian process', 'Linear', 'MLP (fine-tuned)', 'MLP (reg. fine-tuned)', 'MLP (zero-shot)', 'PCHIP', 'PINN (zero-shot)', 'Random forest']; significantly worse than: none; no significant difference from: ['Hydrostatic int.', 'PINN (fine-tuned)'].
+- [density error] PINN significantly better than: ['Gaussian process', 'Linear', 'MLP (fine-tuned)', 'MLP (reg. fine-tuned)', 'MLP (zero-shot)', 'PCHIP', 'Random forest']; significantly worse than: none; no significant difference from: ['EOF (opt. interp.)', 'Hydrostatic int.', 'PINN (fine-tuned)', 'PINN (zero-shot)'].
+- [lower gaps] PINN (reg. fine-tuned) vs MLP (reg. fine-tuned) (T_MAE): not significantly different (Δ = -0.139 K, CI -0.289–0.011, p_Holm = 0.19).
+- [lower gaps] PINN (reg. fine-tuned) vs Hydrostatic int. (P_relMAE): not significantly different (Δ = 0.345 %, CI -0.036–0.876, p_Holm = 0.18).
+- [lower gaps] PINN (reg. fine-tuned) vs EOF (opt. interp.) (T_MAE): not significantly different (Δ = 0.112 K, CI -0.567–0.752, p_Holm = 1).
+- [lower gaps] PINN (reg. fine-tuned) vs PINN (fine-tuned) (T_MAE): not significantly different (Δ = 0.659 K, CI 0.013–1.294, p_Holm = 0.19).
+- [middle gaps] PINN (reg. fine-tuned) vs MLP (reg. fine-tuned) (T_MAE): worse (Δ = -0.237 K, CI -0.370–-0.106, p_Holm = 0.037).
+- [middle gaps] PINN (reg. fine-tuned) vs Hydrostatic int. (P_relMAE): worse (Δ = -0.573 %, CI -0.723–-0.427, p_Holm = 1.6e-07).
+- [middle gaps] PINN (reg. fine-tuned) vs EOF (opt. interp.) (T_MAE): not significantly different (Δ = -0.778 K, CI -1.433–-0.178, p_Holm = 0.47).
+- [middle gaps] PINN (reg. fine-tuned) vs PINN (fine-tuned) (T_MAE): not significantly different (Δ = -0.879 K, CI -1.440–-0.386, p_Holm = 0.11).
+- [upper gaps] PINN (reg. fine-tuned) vs MLP (reg. fine-tuned) (T_MAE): not significantly different (Δ = -0.067 K, CI -0.330–0.206, p_Holm = 1).
+- [upper gaps] PINN (reg. fine-tuned) vs Hydrostatic int. (P_relMAE): not significantly different (Δ = -0.208 %, CI -0.694–0.309, p_Holm = 0.25).
+- [upper gaps] PINN (reg. fine-tuned) vs EOF (opt. interp.) (T_MAE): not significantly different (Δ = 0.013 K, CI -0.964–0.849, p_Holm = 1).
+- [upper gaps] PINN (reg. fine-tuned) vs PINN (fine-tuned) (T_MAE): not significantly different (Δ = 0.743 K, CI -0.323–1.731, p_Holm = 0.36).
+- [selection] Hyper-parameters chosen on validation profiles: {'MLP': {'lam': 0.0, 'alpha': 1.0, 'es': False}, 'PINN': {'lam': 0.1, 'alpha': 1.0, 'es': False}}.
+- [uncertainty, conformal] Gaussian process: calibrated 95 % interval covers 96 % of T and 98 % of ln P values on test profiles.
+- [uncertainty] Gaussian process: nominal 95 % interval covers 79 % of T values — over-confident (intervals too narrow); Spearman(σ, |e|) = 0.28.
+- [uncertainty, conformal] EOF (opt. interp.): calibrated 95 % interval covers 98 % of T and 97 % of ln P values on test profiles.
+- [uncertainty] EOF (opt. interp.): nominal 95 % interval covers 96 % of T values — close to nominal; Spearman(σ, |e|) = 0.49.
+- [uncertainty, conformal] PINN (reg. fine-tuned): calibrated 95 % interval covers 92 % of T and 94 % of ln P values on test profiles.
+- [uncertainty] PINN (reg. fine-tuned): nominal 95 % interval covers 73 % of T values — over-confident (intervals too narrow); Spearman(σ, |e|) = 0.31.
+- [physics] Hydrostatic residual RMS: PINN (reg. fine-tuned) 0.0101, data-only MLP (reg.) 0.12, reference floor 0.00161.

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Physics-Informed Reconstruction of Martian Radio-Occultation Profiles"
+type: software
+authors:
+  - family-names: "Dabral"
+    given-names: "Shailendra"
+    orcid: "https://orcid.org/0009-0007-2475-7349"
+  - family-names: "Agrawal"
+    given-names: "Keshav"
+version: 1.0.0
+date-released: 2026-10-09
+license: MIT
+keywords:
+  - Mars
+  - radio occultation
+  - physics-informed neural networks
+  - atmospheric profiles
+  - uncertainty quantification
