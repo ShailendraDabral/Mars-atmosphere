@@ -1,0 +1,16 @@
+# Medium run on synthetic data: all experiments, reduced grid (~30-60 min CPU).
+DATA_SOURCE: synthetic
+OUTPUT_DIR: results/demo
+GAP_SIZES_KM: [2, 5, 10, 20]
+GAP_LOCATIONS: [lower, middle, upper]
+MAX_TEST_PROFILES: 12
+SEEDS: [0, 1, 2]
+PRETRAIN_EPOCHS: 1000
+FINETUNE_STEPS: 200
+TUNE_ALPHAS: [0.0, 1.0]
+TUNE_LAMBDAS: [0.1, 1.0]
+TUNE_ES: [false]
+NOISE_SEEDS: 2
+HOLDOUT_SEEDS: 2
+HOLDOUT_MAX_TEST: 8
+N_BOOT: 2000

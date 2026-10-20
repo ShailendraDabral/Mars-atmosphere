@@ -1,0 +1,3 @@
+# Full protocol of the paper on synthetic data (CPU: several hours; GPU: ~1-2 h).
+DATA_SOURCE: synthetic
+OUTPUT_DIR: results/synthetic_full
