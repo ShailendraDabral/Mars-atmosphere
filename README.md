@@ -2,7 +2,7 @@
 
 **Physics-informed reconstruction of missing intervals in Martian radio-occultation temperature and pressure profiles.**
 
-Authors: Shailendra Dabral, Keshav Agrawal · License: MIT
+Authors: Shailendra Dabral, Keshav Aggarwal · License: MIT
 
 This repository contains the complete workflow of the study in two forms you can control:
 
