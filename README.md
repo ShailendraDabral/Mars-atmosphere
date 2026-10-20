@@ -1,4 +1,4 @@
-# Martian Profile Gap Lab
+# Martian Profile Gap Lab https://shailendradabral.github.io/Mars-atmosphere/
 
 **Physics-informed reconstruction of missing intervals in Martian radio-occultation temperature and pressure profiles.**
 
@@ -85,7 +85,7 @@ flowchart LR
 
 **Publish on GitHub Pages:** after pushing, go to *Settings → Pages → Source: GitHub Actions*. The workflow
 `.github/workflows/pages.yml` deploys `docs/` on every push to `main`. The site appears at
-`https://<user>.github.io/<repo>/`.
+[`https://<user>.github.io/<repo>/`](https://shailendradabral.github.io/Mars-atmosphere/).
 
 What you can control:
 
