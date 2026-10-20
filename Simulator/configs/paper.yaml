@@ -1,4 +1,0 @@
-# Full experiment of the paper (about 6-7 h on one GPU). Uses the real MRO RSS data.
-DATA_SOURCE: csv
-DATA_LEVELS: data/mro_tps_combined.csv
-OUTPUT_DIR: results/paper
