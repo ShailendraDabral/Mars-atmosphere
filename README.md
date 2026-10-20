@@ -77,6 +77,8 @@ flowchart LR
 | **MLP / PINN regularised fine-tuning (L2-SP)** | yes | PINN | ensemble |
 
 ---
+## Architecture: how data flows through the pipeline 
+<img src="docs/img/architecture-flow.svg" alt="Animated diagram of data flowing through the Mars PINN gap-filling pipeline" width="100%">
 
 ## 1. Interactive simulator
 
