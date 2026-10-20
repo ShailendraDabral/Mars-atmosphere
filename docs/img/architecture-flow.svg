@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 900 935" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<title>Data flow through the Mars PINN gap-filling pipeline</title>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+  </marker>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.18"/>
+  </filter>
+</defs>
+<style>
+  :root {
+    --bg: transparent;
+    --box: #eef2f7;
+    --box-border: #c7d0dc;
+    --text: #1b2430;
+    --sub: #55606e;
+    --line: #9aa6b4;
+    --accent-pinn: #d2691e;
+    --accent-base: #6b7685;
+    --accent-flow: #2f6fb3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --box: #1c222b;
+      --box-border: #39424f;
+      --text: #e8edf4;
+      --sub: #9aa7b6;
+      --line: #4a5563;
+      --accent-pinn: #ff9d4d;
+      --accent-base: #8b97a6;
+      --accent-flow: #5aa0e8;
+    }
+  }
+  .box rect { fill: var(--box); stroke: var(--box-border); stroke-width: 1.5; filter: url(#soft); }
+  .box.pinn rect { stroke: var(--accent-pinn); stroke-width: 2; }
+  .box.baseline rect { stroke: var(--accent-base); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .title { fill: var(--text); font-size: 19px; font-weight: 600; }
+  .sub { fill: var(--sub); font-size: 13px; }
+  .edge { fill: none; stroke: var(--line); stroke-width: 2; }
+  .arrowhead { fill: var(--line); }
+  .packet.pinn { fill: var(--accent-pinn); }
+  .packet.baseline { fill: var(--accent-base); }
+  .packet.flow { fill: var(--accent-flow); }
+  .packet { filter: url(#soft); }
+</style>
+<path id="e1" class="edge " d="M 450.0,100 L 450.0,155" marker-end="url(#arrow)"/>
+<path id="e2" class="edge " d="M 450.0,225 L 450.0,280" marker-end="url(#arrow)"/>
+<path id="e3a" class="edge baseline" d="M 450.0,350 C 450.0,385.0 230.0,385.0 230.0,420" marker-end="url(#arrow)"/>
+<path id="e3b" class="edge pinn" d="M 450.0,350 C 450.0,385.0 670.0,385.0 670.0,420" marker-end="url(#arrow)"/>
+<path id="e4a" class="edge baseline" d="M 230.0,520 C 230.0,552.5 450.0,552.5 450.0,585" marker-end="url(#arrow)"/>
+<path id="e4b" class="edge pinn" d="M 670.0,520 C 670.0,552.5 450.0,552.5 450.0,585" marker-end="url(#arrow)"/>
+<path id="e5" class="edge " d="M 450.0,655 L 450.0,710" marker-end="url(#arrow)"/>
+<path id="e6" class="edge " d="M 450.0,780 L 450.0,835" marker-end="url(#arrow)"/>
+<g class="box" id="b1">
+  <rect x="130.0" y="30" width="640" height="70" rx="14"/>
+  <text x="450.0" y="59.0" class="title" text-anchor="middle">Mars Radio-Occultation Profiles</text>
+  <text x="450.0" y="79.0" class="sub" text-anchor="middle">Synthetic archive or real MRO RSS data · T(Z), P(Z)</text>
+</g>
+<g class="box" id="b2">
+  <rect x="130.0" y="155" width="640" height="70" rx="14"/>
+  <text x="450.0" y="184.0" class="title" text-anchor="middle">Quality Control &amp; Physics Audit</text>
+  <text x="450.0" y="204.0" class="sub" text-anchor="middle">Trim noisy tops · check ideal-gas &amp; hydrostatic balance</text>
+</g>
+<g class="box" id="b3">
+  <rect x="130.0" y="280" width="640" height="70" rx="14"/>
+  <text x="450.0" y="309.0" class="title" text-anchor="middle">Profile Split &amp; Synthetic Gap</text>
+  <text x="450.0" y="329.0" class="sub" text-anchor="middle">Leak-free train / val / test · remove an altitude window</text>
+</g>
+<g class="box baseline" id="b4a">
+  <rect x="35.0" y="420" width="390" height="100" rx="14"/>
+  <text x="230.0" y="464.0" class="title" text-anchor="middle">Baseline Methods</text>
+  <text x="230.0" y="484.0" class="sub" text-anchor="middle">Linear/PCHIP · Hydrostatic · GP · EOF · Random Forest</text>
+</g>
+<g class="box pinn" id="b4b">
+  <rect x="475.0" y="420" width="390" height="100" rx="14"/>
+  <text x="670.0" y="464.0" class="title" text-anchor="middle">Physics-Informed Neural Net</text>
+  <text x="670.0" y="484.0" class="sub" text-anchor="middle">Pretrain + physics loss · L2-SP fine-tune · deep ensemble</text>
+</g>
+<g class="box" id="b5">
+  <rect x="130.0" y="585" width="640" height="70" rx="14"/>
+  <text x="450.0" y="614.0" class="title" text-anchor="middle">Conformal Calibration &amp; Reconstruction</text>
+  <text x="450.0" y="634.0" class="sub" text-anchor="middle">Calibrated T, P and uncertainty band over the gap</text>
+</g>
+<g class="box" id="b6">
+  <rect x="130.0" y="710" width="640" height="70" rx="14"/>
+  <text x="450.0" y="739.0" class="title" text-anchor="middle">Statistical Benchmark</text>
+  <text x="450.0" y="759.0" class="sub" text-anchor="middle">Paired Wilcoxon + Holm correction · bootstrap CIs</text>
+</g>
+<g class="box" id="b7">
+  <rect x="130.0" y="835" width="640" height="70" rx="14"/>
+  <text x="450.0" y="870.0" class="title" text-anchor="middle">Report: Figures, Tables &amp; results_summary.md</text>
+</g>
+<circle r="5" class="packet flow"><animateMotion dur="2.2s" begin="0s" repeatCount="indefinite"><mpath href="#e1"/></animateMotion></circle>
+<circle r="5" class="packet flow"><animateMotion dur="2.2s" begin="0.3s" repeatCount="indefinite"><mpath href="#e2"/></animateMotion></circle>
+<circle r="5" class="packet baseline"><animateMotion dur="2.6s" begin="0.6s" repeatCount="indefinite"><mpath href="#e3a"/></animateMotion></circle>
+<circle r="5" class="packet pinn"><animateMotion dur="2.6s" begin="0.6s" repeatCount="indefinite"><mpath href="#e3b"/></animateMotion></circle>
+<circle r="5" class="packet baseline"><animateMotion dur="2.6s" begin="1.6s" repeatCount="indefinite"><mpath href="#e4a"/></animateMotion></circle>
+<circle r="5" class="packet pinn"><animateMotion dur="2.6s" begin="1.6s" repeatCount="indefinite"><mpath href="#e4b"/></animateMotion></circle>
+<circle r="5" class="packet flow"><animateMotion dur="2.2s" begin="2.4s" repeatCount="indefinite"><mpath href="#e5"/></animateMotion></circle>
+<circle r="5" class="packet flow"><animateMotion dur="2.2s" begin="2.7s" repeatCount="indefinite"><mpath href="#e6"/></animateMotion></circle>
+</svg>
