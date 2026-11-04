@@ -15,6 +15,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
+from .config import config_hash
 from .data import IN_COLS, OUT_COLS
 from .physics import Physics
 
@@ -116,7 +117,7 @@ class NNToolkit:
     def pretrain(self, tr_df, va_df, family, lam, seed, tag="main", norm=None, verbose=False):
         """Global pre-training on full training profiles; checkpoint chosen by validation data loss."""
         cfg = self.cfg
-        ckpt = self.ckpt_dir / f"pretrain_{tag}_{family}_seed{seed}.pt"
+        ckpt = self.ckpt_dir / f"pretrain_{tag}_{family}_lam{lam}_seed{seed}_{config_hash(cfg)}.pt"
         set_seed(seed)
         model = self.new_model(norm)
         if ckpt.exists():

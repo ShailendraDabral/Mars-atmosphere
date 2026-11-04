@@ -19,7 +19,7 @@ import pandas as pd
 from . import plots
 from .baselines import fit_eof_pair, fit_rf
 from .benchmark import NAMES, OURS, Runner
-from .config import save_config
+from .config import config_hash, save_config
 from .data import (build_cases, load_raw, physics_audit, preprocess, quality_control,
                    stratified_profile_split)
 from .metrics import (POINT_METRICS, compute_metrics, conformal_coverage, fit_conformal, paired_tests,
@@ -130,42 +130,49 @@ class Pipeline:
         self.EOF = fit_eof_pair(self.train_df, cfg)
         self.log(f"EOF modes kept: T {self.EOF['T']['k']}, lnP {self.EOF['P']['k']}")
 
+    def _tune(self, base, val_df, val_ids, prefix=""):
+        """Grid search of (lambda, alpha, early stopping) for MLP and PINN fine-tuning on validation gaps."""
+        cfg = self.cfg
+        tune_cases = build_cases(val_df, val_ids, cfg["TUNE_CONFIGS"], cfg["MIN_OBSERVED_KM"])
+        rows = []
+        for fam in ["MLP", "PINN"]:
+            for lam in ([0.0] if fam == "MLP" else cfg["TUNE_LAMBDAS"]):
+                for alpha in cfg["TUNE_ALPHAS"]:
+                    for es in cfg["TUNE_ES"]:
+                        hpo = {fam: dict(lam=lam, alpha=alpha, es=es)}
+                        pw = self.runner.run_benchmark(
+                            tune_cases, val_df, {fam: base[fam]}, None,
+                            f"{prefix}tune_{fam}_lam{lam}_alpha{alpha}_es{int(es)}",
+                            methods=[f"{fam.lower()}_rft"], seeds_limit=1, hp_override=hpo)
+                        e = pw.assign(aT=(pw.T_pred - pw.T_ref).abs(),
+                                      aP=100 * (np.exp(pw.lnP_pred - pw.lnP_ref) - 1).abs())
+                        pc = e.groupby(["Profile_ID", "case_id"])[["aT", "aP"]].mean().groupby("Profile_ID").mean()
+                        rows.append(dict(family=fam, lam=lam, alpha=alpha, es=es,
+                                         T_MAE=pc["aT"].mean(), P_relMAE=pc["aP"].mean()))
+        T = pd.DataFrame(rows)
+        T["score"] = (T.groupby("family")["T_MAE"].transform(lambda x: x / x.min())
+                      + T.groupby("family")["P_relMAE"].transform(lambda x: x / x.min()))
+        T.to_csv(self.tab / f"{prefix}tuning_validation.csv", index=False)
+        self.log(T.round(4).to_string())
+        HP = {}
+        for fam, g in T.groupby("family"):
+            r = g.loc[g["score"].idxmin()]
+            HP[fam] = dict(lam=float(r["lam"]), alpha=float(r["alpha"]), es=bool(r["es"]))
+        return HP
+
     def step_tune(self):
         cfg = self.cfg
         hp_file = self.out / "selected_hyperparameters.json"
         if cfg["HP_OVERRIDE"]:
             HP = cfg["HP_OVERRIDE"]
             self.log("Using HP_OVERRIDE:", HP)
-        elif hp_file.exists():
+        elif hp_file.exists() and json.load(open(hp_file)).get("config_hash") == config_hash(cfg):
             HP = json.load(open(hp_file))
+            HP.pop("config_hash")
             self.log("Loaded selected hyper-parameters:", HP)
         else:
-            tune_cases = build_cases(self.val_df, self.VAL_IDS, cfg["TUNE_CONFIGS"], cfg["MIN_OBSERVED_KM"])
-            rows = []
-            for fam in ["MLP", "PINN"]:
-                for lam in ([0.0] if fam == "MLP" else cfg["TUNE_LAMBDAS"]):
-                    for alpha in cfg["TUNE_ALPHAS"]:
-                        for es in cfg["TUNE_ES"]:
-                            hpo = {fam: dict(lam=lam, alpha=alpha, es=es)}
-                            pw = self.runner.run_benchmark(
-                                tune_cases, self.val_df, {fam: self.BASE[fam]}, None,
-                                f"tune_{fam}_lam{lam}_alpha{alpha}_es{int(es)}",
-                                methods=[f"{fam.lower()}_rft"], seeds_limit=1, hp_override=hpo)
-                            e = pw.assign(aT=(pw.T_pred - pw.T_ref).abs(),
-                                          aP=100 * (np.exp(pw.lnP_pred - pw.lnP_ref) - 1).abs())
-                            pc = e.groupby(["Profile_ID", "case_id"])[["aT", "aP"]].mean().groupby("Profile_ID").mean()
-                            rows.append(dict(family=fam, lam=lam, alpha=alpha, es=es,
-                                             T_MAE=pc["aT"].mean(), P_relMAE=pc["aP"].mean()))
-            T = pd.DataFrame(rows)
-            T["score"] = (T.groupby("family")["T_MAE"].transform(lambda x: x / x.min())
-                          + T.groupby("family")["P_relMAE"].transform(lambda x: x / x.min()))
-            T.to_csv(self.tab / "tuning_validation.csv", index=False)
-            self.log(T.round(4).to_string())
-            HP = {}
-            for fam, g in T.groupby("family"):
-                r = g.loc[g["score"].idxmin()]
-                HP[fam] = dict(lam=float(r["lam"]), alpha=float(r["alpha"]), es=bool(r["es"]))
-            json.dump(HP, open(hp_file, "w"), indent=2)
+            HP = self._tune(self.BASE, self.val_df, self.VAL_IDS)
+            json.dump({**HP, "config_hash": config_hash(cfg)}, open(hp_file, "w"), indent=2)
         self.runner.HP = self.HP = HP
         self.R["HP"] = HP
         self.log("Selected (validation):", HP)
@@ -262,9 +269,11 @@ class Pipeline:
             base_h = {fam: [(s, self.nnt.pretrain(tr_h, va_h, fam, self.LAM[fam], s, tag=f"holdMY{int(my)}", norm=norm_h))
                             for s in seeds] for fam in self.LAM}
             rf_h, eof_h = fit_rf(tr_h), fit_eof_pair(tr_h, cfg)
+            # hyper-parameters are re-selected without the held-out year, whose profiles are in VAL_IDS
+            hp_h = cfg["HP_OVERRIDE"] or self._tune(base_h, va_h, rest[:n_va], prefix=f"holdMY{int(my)}_")
             cases = build_cases(te_h, test_ids, cfg["HOLDOUT_CASES"], cfg["MIN_OBSERVED_KM"])
             pw = self.runner.run_benchmark(cases, te_h, base_h, rf_h, f"pointwise_holdout_MY{int(my)}",
-                                           methods=methods, eof=eof_h)
+                                           methods=methods, eof=eof_h, hp_override=hp_h)
             pw["holdout_MY"] = int(my)
             parts.append(pw)
         if not parts:
