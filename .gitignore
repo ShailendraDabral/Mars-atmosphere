@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Pipeline outputs of new runs (the reported results in results/figures and results/tables are tracked)
+results/*/
+!results/figures/
+!results/tables/
+checkpoints/
+raw/
+
+# Local data
+data/synthetic_tps.csv
+data/raw/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
