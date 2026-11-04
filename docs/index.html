@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Martian Profile Gap Lab</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.35' cy='.35' r='.75'%3E%3Cstop offset='0' stop-color='%23f2a76b'/%3E%3Cstop offset='1' stop-color='%23b4441f'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3Cpath d='M5 14h22' stroke='%23fff' stroke-opacity='.55' stroke-width='3' stroke-dasharray='4 3'/%3E%3C/svg%3E">
 <meta name="description" content="Interactive simulation of the full workflow for reconstructing missing intervals in Mars radio-occultation profiles with physics-informed neural networks.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,6 +28,8 @@
   /* per-stage accent hues */
   --stage-data: #3b6fe0; --stage-qc: #119d8d; --stage-split: #7c3aed; --stage-gaps: #d4870a;
   --stage-train: #d6368f; --stage-recon: #0f9d64; --stage-bench: #4f53d1; --stage-exp: #0b96ab; --stage-export: #6b7488;
+  --stage-home: #c2532b; --stage-game: #d4870a; --mars: #c2532b;
+  --c10: #26a69a; --c11: #d98c87; --c12: #6d9fd1;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0b0e17; --panel: #141926; --panel-rgb: 20,25,38; --ink: #e9ecf6; --muted: #98a2b8; --line: #2a3144; --soft: #1a2032;
@@ -39,6 +41,8 @@
   --mesh-1: #2a2f6b; --mesh-2: #0f4a52; --mesh-3: #4a2f1a; --mesh-4: #4a1f3a;
   --stage-data: #6ea0ff; --stage-qc: #3fd9c4; --stage-split: #b38bff; --stage-gaps: #f2bb4e;
   --stage-train: #ff7fc0; --stage-recon: #52e0a4; --stage-bench: #9a9dff; --stage-exp: #4fd4e8; --stage-export: #a6afc4;
+  --stage-home: #f08a5d; --stage-game: #f2bb4e; --mars: #f08a5d;
+  --c10: #4fd1c1; --c11: #f0a9a3; --c12: #9cc4f0;
   color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #0b0e17; --panel: #141926; --panel-rgb: 20,25,38; --ink: #e9ecf6; --muted: #98a2b8; --line: #2a3144; --soft: #1a2032;
@@ -50,6 +54,8 @@
   --mesh-1: #2a2f6b; --mesh-2: #0f4a52; --mesh-3: #4a2f1a; --mesh-4: #4a1f3a;
   --stage-data: #6ea0ff; --stage-qc: #3fd9c4; --stage-split: #b38bff; --stage-gaps: #f2bb4e;
   --stage-train: #ff7fc0; --stage-recon: #52e0a4; --stage-bench: #9a9dff; --stage-exp: #4fd4e8; --stage-export: #a6afc4;
+  --stage-home: #f08a5d; --stage-game: #f2bb4e; --mars: #f08a5d;
+  --c10: #4fd1c1; --c11: #f0a9a3; --c12: #9cc4f0;
   color-scheme: dark; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -86,7 +92,8 @@ header.top .wrap { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: 
 .brand h1 { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand small { color: var(--muted); font-size: .8rem; }
 .top-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-@media (max-width: 600px) { header.top { position: static; } .brand small { display: none; } .top-actions { margin-left: 0; } }
+@media (max-width: 600px) { header.top { position: static; } .brand small { display: none; } .top-actions { margin-left: 0; }
+  .top-actions .status, .top-actions .lbl, #btnStop:disabled { display: none; } .top-actions .btn { padding: 8px 11px; } }
 .progress { height: 3px; background: var(--soft); }
 .progress > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .2s; }
 
@@ -106,7 +113,7 @@ nav.steps button[data-go="recon"]  { --stage: var(--stage-recon); }
 nav.steps button[data-go="bench"]  { --stage: var(--stage-bench); }
 nav.steps button[data-go="exp"]    { --stage: var(--stage-exp); }
 nav.steps button[data-go="export"] { --stage: var(--stage-export); }
-nav.steps button { all: unset; cursor: pointer; display: grid; grid-template-columns: 26px 1fr 10px; gap: 8px; align-items: center; padding: 9px 10px; border-radius: var(--radius-sm); color: var(--muted); transition: background .15s, color .15s, transform .15s; }
+nav.steps button { all: unset; cursor: pointer; display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 9px 10px; border-radius: var(--radius-sm); color: var(--muted); transition: background .15s, color .15s, transform .15s; }
 nav.steps button:hover { background: var(--soft); color: var(--ink); transform: translateX(2px); }
 nav.steps button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 nav.steps button[aria-current="step"] { background: color-mix(in srgb, var(--stage, var(--accent)) 16%, transparent); color: var(--ink); font-weight: 600; box-shadow: inset 2px 0 0 var(--stage, var(--accent)); }
@@ -167,16 +174,16 @@ section.panel { display: flex; flex-direction: column; gap: 18px; min-width: 0; 
 .checks input { accent-color: var(--stage, var(--accent)); }
 input:focus-visible, select:focus-visible { outline: 2px solid var(--stage, var(--accent)); outline-offset: 1px; }
 input[type=number]:focus, input[type=text]:focus { border-color: var(--stage, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage, var(--accent)) 18%, transparent); }
-button.btn {
-  font: 600 .88rem var(--body); letter-spacing: .01em; padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border);
+.btn {
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font: 600 .88rem var(--body); letter-spacing: .01em; padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border);
   background: var(--glass-bg); color: var(--ink); cursor: pointer; backdrop-filter: blur(10px); transition: transform .12s, box-shadow .15s, border-color .15s;
 }
-button.btn:hover { border-color: var(--stage, var(--accent)); transform: translateY(-1px); box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--stage, var(--accent)) 60%, transparent); }
-button.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--accent-ink); border-color: transparent; box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--accent) 70%, transparent); }
-button.btn.primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
-button.btn.danger { color: var(--bad); }
-button.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-button.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:hover { border-color: var(--stage, var(--accent)); transform: translateY(-1px); box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--stage, var(--accent)) 60%, transparent); }
+.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--accent-ink); border-color: transparent; box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--accent) 70%, transparent); }
+.btn.primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .status { font-family: var(--mono); font-size: .82rem; color: var(--muted); }
 
@@ -215,7 +222,65 @@ details.log { background: var(--glass-bg); backdrop-filter: blur(16px); border: 
 details.log summary { cursor: pointer; padding: 10px 14px; font-weight: 700; font-family: var(--display); }
 details.log pre { margin: 0; padding: 8px 14px 14px; max-height: 220px; overflow: auto; font: .78rem/1.5 var(--mono); color: var(--muted); white-space: pre-wrap; }
 textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); background: color-mix(in srgb, var(--panel) 55%, transparent); color: var(--ink); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 9px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .mesh i { animation: none !important; } }
+
+/* header links, theme toggle, citation dialog */
+.top-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.btn svg { width: 15px; height: 15px; fill: currentColor; }
+.btn.icon { padding: 8px 10px; line-height: 0; }
+dialog.cite { border: 1px solid var(--glass-border); border-radius: var(--radius); background: var(--panel); color: var(--ink); max-width: min(640px, calc(100vw - 32px)); width: 100%; padding: 20px 22px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.45); }
+dialog.cite::backdrop { background: rgba(10,12,20,.45); backdrop-filter: blur(3px); }
+dialog.cite pre { background: var(--soft); border-radius: var(--radius-sm); padding: 12px; font: .78rem/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; margin: 10px 0 14px; }
+
+/* navigation extras */
+nav.steps button[data-go="home"] { --stage: var(--stage-home); }
+nav.steps button[data-go="game"] { --stage: var(--stage-game); }
+nav.steps .nav-sep { height: 1px; background: var(--glass-border); margin: 6px 6px; }
+nav.steps .n.icon { font-size: .8rem; line-height: 20px; }
+nav.steps .tag { font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--stage); }
+@media (max-width: 860px) { nav.steps .nav-sep { width: 1px; height: auto; margin: 4px 4px; } }
+
+/* overview */
+section.panel[data-step="home"] { --stage: var(--stage-home); }
+section.panel[data-step="game"] { --stage: var(--stage-game); }
+.hero { padding: 28px 28px 26px; gap: 14px; background:
+  radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--mars) 22%, transparent) 0%, transparent 55%), var(--glass-bg); }
+.hero .eyebrow { font: 700 .72rem var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--mars); }
+.hero h2 { font-size: clamp(1.6rem, 3.2vw, 2.35rem); line-height: 1.15; max-width: 26ch; background: linear-gradient(90deg, var(--ink) 30%, var(--mars)); -webkit-background-clip: text; background-clip: text; }
+.hero .authors { font-weight: 600; color: var(--ink); }
+.hero .planet { position: absolute; right: -60px; top: -60px; width: 260px; height: 260px; border-radius: 50%; opacity: .5; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, #f6b07a, #c2532b 55%, #6e2410 100%); box-shadow: inset -30px -20px 60px rgba(0,0,0,.35); }
+.hero .planet::after { content: ""; position: absolute; inset: 44% -8% auto; height: 16px; border-top: 3px dashed rgba(255,255,255,.75); border-bottom: 3px dashed rgba(255,255,255,.75); transform: rotate(-8deg); }
+.hero > *:not(.planet) { position: relative; }
+@media (max-width: 700px) { .hero { padding: 20px 18px; } .hero .planet { width: 160px; height: 160px; right: -50px; top: -50px; } }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.kpi { border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 10px 12px; background: color-mix(in srgb, var(--panel) 55%, transparent); }
+.kpi strong { display: block; font: 700 1.45rem/1.1 var(--display); color: var(--ink); }
+.kpi span { font-size: .74rem; color: var(--muted); }
+@media (max-width: 700px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+ol.findings { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; }
+ol.findings li::marker { color: var(--stage); font-weight: 700; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.flow button { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--glass-border); font-size: .84rem; background: color-mix(in srgb, var(--panel) 55%, transparent); transition: transform .12s, border-color .15s; }
+.flow button:hover, .flow button:focus-visible { border-color: var(--stage); transform: translateY(-1px); }
+.flow .arrow { color: var(--muted); }
+.yes { color: var(--ok); font-weight: 700; }
+
+/* gap challenge */
+.chart.draw { touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.chart.draw.locked { cursor: default; }
+.verdict { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--stage) 12%, transparent); border: 1px solid color-mix(in srgb, var(--stage) 35%, transparent); }
+.verdict .score { font: 700 2.2rem/1 var(--display); color: var(--stage); min-width: 2.6ch; text-align: center; }
+.verdict .score small { display: block; font: 600 .66rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.verdict.win { animation: pop .5s ease-out; }
+@keyframes pop { 0% { transform: scale(.94); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+tr.you td { font-weight: 700; color: var(--stage); }
+.sparkle { position: fixed; pointer-events: none; z-index: 50; width: 8px; height: 8px; border-radius: 2px; animation: fall 1.4s ease-in forwards; }
+@keyframes fall { to { transform: translate(var(--dx), 70vh) rotate(540deg); opacity: 0; } }
+
+/* footer */
+footer.site { margin-top: 8px; padding: 16px 4px 0; border-top: 1px solid var(--glass-border); color: var(--muted); font-size: .8rem; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+footer.site a { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .mesh i { animation: none !important; } .sparkle, .verdict.win { animation: none !important; display: none; } }
 </style>
 </head>
 <body>
@@ -230,6 +295,9 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
       <span class="status" id="globalStatus">Ready</span>
       <button class="btn danger" id="btnStop" disabled>Stop</button>
       <button class="btn primary" id="btnRunAll">Run full workflow</button>
+      <a class="btn" href="https://github.com/ShailendraDabral/Mars-atmosphere" target="_blank" rel="noopener" aria-label="Source code on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span class="lbl">GitHub</span></a>
+      <button class="btn" id="btnCite">Cite</button>
+      <button class="btn icon" id="btnTheme" aria-label="Toggle light or dark theme" title="Toggle theme"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5v11a5.5 5.5 0 010-11z"/></svg></button>
     </div>
   </div>
   <div class="progress"><i id="progressBar"></i></div>
@@ -239,6 +307,78 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
 <div class="shell">
   <nav class="steps" id="stepNav" aria-label="Workflow steps"></nav>
   <main id="main">
+
+  <!-- OVERVIEW -->
+  <section class="panel" data-step="home" hidden>
+    <div class="card hero">
+      <div class="planet" aria-hidden="true"></div>
+      <span class="eyebrow">Research companion · MRO Radio Science</span>
+      <h2>Filling the gaps in Mars’s atmosphere with physics-informed neural networks</h2>
+      <p class="lede">Radio occultations from the Mars Reconnaissance Orbiter measure temperature, pressure and density with height, but stretches of a profile can be missing. We compare twelve ways to fill such gaps, including a neural network that obeys the ideal-gas law exactly and is penalised whenever it breaks hydrostatic balance.</p>
+      <p class="authors">Shailendra Dabral · Keshav Aggarwal · Soumyaneal Banerjee</p>
+      <div class="row">
+        <button class="btn primary" data-goto="game">Play the gap challenge</button>
+        <button class="btn" data-goto="data">Explore the workflow step by step</button>
+        <a class="btn" href="https://github.com/ShailendraDabral/Mars-atmosphere" target="_blank" rel="noopener">Code, data and paper results</a>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><strong>185</strong><span>MRO RSS profiles, Mars years 29–31</span></div>
+        <div class="kpi"><strong>330</strong><span>gap cases on 28 unseen test profiles</span></div>
+        <div class="kpi"><strong>12</strong><span>reconstruction methods compared</span></div>
+        <div class="kpi"><strong>4.4× </strong><span>lower pressure error: PINN vs. matched MLP</span></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>What the study found on the real data</h3>
+        <ol class="findings">
+          <li><b>Physics fixes pressure and density.</b> The regularised PINN’s pressure error is 1.0&nbsp;% against 4.4&nbsp;% for the identical network without physics, and it is statistically tied with exact hydrostatic integration.</li>
+          <li><b>Physics does not determine temperature.</b> Hydrostatic balance links pressure to temperature, not the other way round. The best temperature comes from a prior learned across profiles (EOF, 2.78&nbsp;K); the PINN (3.00&nbsp;K) is not significantly different.</li>
+          <li><b>Physically consistent output.</b> The PINN’s hydrostatic residual is about ten times smaller than the data-only network’s.</li>
+          <li><b>Honest error bars need calibration.</b> Raw 95&nbsp;% ensemble intervals cover only 73&nbsp;% of the truth; split-conformal calibration on validation profiles raises this to 92&nbsp;%.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <div class="row"><h3>Reported error by method</h3>
+          <label class="field"><span>Metric</span><select id="homeMetric">
+            <option value="P">Pressure error (%)</option><option value="T">Temperature MAE (K)</option><option value="n">Density error (%)</option><option value="H">Hydrostatic residual (RMS)</option>
+          </select></label></div>
+        <div class="chart" id="chHome"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Reported results on the real MRO data</h3>
+      <p class="status">Mean over 28 test profiles, 95&nbsp;% profile-level bootstrap CI in brackets. Source: <a href="https://github.com/ShailendraDabral/Mars-atmosphere/blob/main/results/tables/summary_overall.csv" target="_blank" rel="noopener">results/tables/summary_overall.csv</a>.</p>
+      <div class="tbl" id="tblHome"></div>
+    </div>
+    <div class="plain"><b>How this simulator relates to the paper</b>The simulator runs the same physics, splits, gap scenarios, metrics and statistical tests in your browser, but by default on a <em>synthetic</em> archive with smaller networks and shorter training so that a full run takes minutes. Random forest and the plain (un-regularised) fine-tuned networks are only in the Python pipeline. The numbers you produce here will therefore differ from the table above, which comes from the full run on the real data.</div>
+    <div class="card">
+      <h3>The workflow</h3>
+      <div class="flow" id="homeFlow"></div>
+    </div>
+  </section>
+
+  <!-- GAP CHALLENGE -->
+  <section class="panel" data-step="game" hidden>
+    <div><h2>Gap challenge</h2><p class="lede">Can you beat the algorithms? Part of a Mars temperature profile has been hidden. Draw your best guess across the shaded band, then reveal the truth and see where you rank against the methods from the study.</p></div>
+    <div class="card">
+      <div class="controls">
+        <label class="field"><span>Difficulty</span><select id="gmLevel">
+          <option value="easy">Easy · 5 km, middle</option><option value="medium" selected>Medium · 10 km, middle</option>
+          <option value="hard">Hard · 10 km at the top or bottom</option><option value="expert">Expert · 18 km anywhere</option>
+        </select></label>
+        <button class="btn" id="btnGmNew">New profile</button>
+        <button class="btn" id="btnGmClear">Clear drawing</button>
+        <button class="btn primary" id="btnGmReveal">Reveal</button>
+      </div>
+      <div class="stats" id="gmStats"></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Draw temperature across the gap</h3><p class="status" id="gmHint"></p><div class="chart draw" id="chGame"></div><div class="legend" id="legGame"></div></div>
+      <div class="card"><h3>Scoreboard</h3><div id="gmResult"><div class="empty">Draw your guess across the shaded band, then press Reveal.</div></div></div>
+    </div>
+    <div class="plain"><b>Why pressure comes for free</b>Once you have drawn temperature, hydrostatic balance fixes pressure: we integrate d&nbsp;ln&nbsp;P&nbsp;/&nbsp;dZ&nbsp;=&nbsp;−1&nbsp;/&nbsp;H(T) from the edge of the gap through your curve. A good temperature guess automatically gives a good pressure, and pressure is where the PINN’s physics term helps most in the study.</div>
+  </section>
 
   <!-- 1 DATA -->
   <section class="panel" data-step="data">
@@ -346,8 +486,8 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
     <div class="card">
       <div class="checks" id="reconMethods"></div>
       <div class="controls">
-        <label class="field"><span>MLP &alpha;</span><input type="number" id="alphaMLP" value="0.1" step="0.05" min="0" max="10"></label>
-        <label class="field"><span>PINN &alpha;</span><input type="number" id="alphaPINN" value="0.1" step="0.05" min="0" max="10"></label>
+        <label class="field"><span>MLP &alpha;</span><input type="number" id="alphaMLP" value="1" step="0.05" min="0" max="10"></label>
+        <label class="field"><span>PINN &alpha;</span><input type="number" id="alphaPINN" value="1" step="0.05" min="0" max="10"></label>
         <label class="field"><span>PINN &lambda; (fine-tune)</span><input type="number" id="lamPINN" value="0.1" step="0.05" min="0" max="100"></label>
         <label class="field"><span>Fine-tune steps</span><input type="number" id="ftSteps" value="150" min="0" max="1000" step="25"></label>
         <label class="field"><span>Fine-tune lr</span><input type="number" id="ftLr" value="0.001" step="0.0005" min="0.0001" max="0.01"></label>
@@ -368,7 +508,7 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
   <!-- 7 BENCHMARK -->
   <section class="panel" data-step="bench" hidden>
     <div><h2>Benchmark (E1)</h2><p class="lede">Every method on every test profile, gap size and location. Errors are averaged per profile, then compared profile by profile with Wilcoxon signed-rank tests and Holm correction.</p></div>
-    <div class="plain"><b>In plain words</b>One lucky case proves nothing. The benchmark repeats the reconstruction many times and asks whether the differences between methods are larger than chance would produce. Brackets show 95&nbsp;% confidence intervals.</div>
+    <div class="plain"><b>In plain words</b>One lucky case proves nothing. The benchmark repeats the reconstruction many times and asks whether the differences between methods are larger than chance would produce. Brackets show 95&nbsp;% confidence intervals. In the browser the benchmark covers 9 of the paper’s 12 methods (random forest and the plain fine-tuned networks are Python-only) and fewer test profiles by default.</div>
     <div class="card">
       <div class="controls">
         <div class="field"><span>Gap sizes (km)</span><div class="checks" id="benchSizes"></div></div>
@@ -407,7 +547,7 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
 
   <!-- 8 EXPERIMENTS -->
   <section class="panel" data-step="exp" hidden>
-    <div><h2>Robustness experiments</h2><p class="lede">Three further tests from the paper, on 10&nbsp;km gaps.</p></div>
+    <div><h2>Robustness experiments</h2><p class="lede">The paper’s three further tests on 10&nbsp;km gaps, at a reduced size that runs in the browser (fewer test profiles and ensemble members, shorter training).</p></div>
     <div class="grid3">
       <div class="card">
         <h3>E2 &middot; Noisy observations</h3>
@@ -439,7 +579,7 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
 
   <!-- 9 EXPORT -->
   <section class="panel" data-step="export" hidden>
-    <div><h2>Export</h2><p class="lede">Take the settings and results with you. The configuration converts directly into a YAML file for the Python pipeline in this repository (<code>marspinn run --config my.yaml</code>).</p></div>
+    <div><h2>Export</h2><p class="lede">Take the settings and results with you. The settings you chose become a YAML file for the Python pipeline in this repository (<code>marspinn run --config my.yaml</code>); keys not listed keep the paper’s defaults.</p></div>
     <div class="card">
       <div class="row">
         <label class="field"><span>Content</span><select id="exportKind">
@@ -458,9 +598,33 @@ textarea.out { width: 100%; min-height: 180px; font: .8rem/1.45 var(--mono); bac
   </section>
 
   <details class="log" id="logBox"><summary>Run log</summary><pre id="log"></pre></details>
+  <footer class="site">
+    <span>© 2026 Shailendra Dabral, Keshav Aggarwal, Soumyaneal Banerjee · <a href="https://github.com/ShailendraDabral/Mars-atmosphere/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></span>
+    <span>Data: MRO Radio Science TPS profiles (MRO-M-RSS-5-TPS-V1.0, D.&nbsp;P.&nbsp;Hinson, NASA PDS) · <a href="https://github.com/ShailendraDabral/Mars-atmosphere" target="_blank" rel="noopener">GitHub</a></span>
+  </footer>
   </main>
 </div>
 </div>
+
+<dialog class="cite" id="citeDlg" aria-labelledby="citeTtl">
+  <h3 id="citeTtl">Cite this work</h3>
+  <p class="lede">Please cite the software and the MRO Radio Science data set.</p>
+<pre id="citeText">@software{dabral_mars_pinn_2026,
+  author  = {Dabral, Shailendra and Aggarwal, Keshav and Banerjee, Soumyaneal},
+  title   = {Physics-informed reconstruction of missing intervals in Martian radio-occultation profiles},
+  year    = {2026},
+  version = {1.0.0},
+  url     = {https://github.com/ShailendraDabral/Mars-atmosphere},
+  license = {MIT}
+}
+
+@misc{hinson_mro_rss_tps,
+  author       = {Hinson, D. P.},
+  title        = {{MRO} Radio Science Temperature--Pressure Profiles, {MRO-M-RSS-5-TPS-V1.0}},
+  howpublished = {NASA Planetary Data System, Atmospheres Node}
+}</pre>
+  <div class="row"><button class="btn primary" id="btnCiteCopy">Copy BibTeX</button><button class="btn" id="btnCiteClose">Close</button><span class="status" id="citeInfo"></span></div>
+</dialog>
 
 <script src="sim-core.js"></script>
 <script>
@@ -474,7 +638,7 @@ const STEPS = [
 ];
 const st = { done: {}, stop: false, busy: false, bench: null, tune: null, calib: null, e2: null, e3: null, e4: null };
 const METHOD_KEYS = Object.keys(S.METHODS);
-const COLORS = { lin: "--c1", pchip: "--c2", hydro: "--c3", gp: "--c4", eof: "--c5", mlp_zs: "--c6", pinn_zs: "--c7", mlp_rft: "--c8", pinn_rft: "--c9" };
+const COLORS = { lin: "--c1", pchip: "--c2", hydro: "--c3", gp: "--c4", eof: "--c5", mlp_zs: "--c6", pinn_zs: "--c7", mlp_rft: "--c8", pinn_rft: "--c9", rf: "--c10", mlp_ft: "--c11", pinn_ft: "--c12" };
 const colorOf = (k) => `var(${COLORS[k] || "--c1"})`;
 const keyOfName = Object.fromEntries(Object.entries(S.METHODS).map(([k, v]) => [v, k]));
 
@@ -492,9 +656,13 @@ async function guard(name, fn) {
 }
 
 // ------------------------------------------------------------------ navigation
+const EXTRA = [["home", "Overview", "★"], ["game", "Gap challenge", "✎"]];
 function renderNav() {
-  const cur = document.querySelector("section.panel:not([hidden])")?.dataset.step || "data";
-  $("stepNav").innerHTML = STEPS.map(([k, label], i) =>
+  const cur = document.querySelector("section.panel:not([hidden])")?.dataset.step || "home";
+  $("stepNav").innerHTML = EXTRA.map(([k, label, icon]) =>
+    `<button data-go="${k}" ${k === cur ? 'aria-current="step"' : ""}><span class="n icon" aria-hidden="true">${icon}</span><span>${label}</span><span class="tag">${k === "game" ? "play" : ""}</span></button>`).join("") +
+    '<div class="nav-sep" role="presentation"></div>' +
+    STEPS.map(([k, label], i) =>
     `<button data-go="${k}" ${k === cur ? 'aria-current="step"' : ""}><span class="n">${i + 1}</span><span>${label}</span><span class="dot ${st.done[k] ? "done" : ""}" id="dot-${k}"></span></button>`).join("");
   $("stepNav").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
 }
@@ -504,6 +672,8 @@ function show(step) {
   renderNav();
   try { localStorage.setItem("gaplab-step", step); } catch (e) { /* storage unavailable */ }
   if (step === "export") refreshExport();
+  if (step === "game" && !gm.round && st.split) gmNew();
+  if (location.hash !== "#" + step) history.replaceState(null, "", "#" + step);
   window.scrollTo({ top: 0 });
 }
 function markDone(k) { st.done[k] = true; setDot(k, "done"); }
@@ -578,9 +748,10 @@ function plot(el, o) {
   if (ay.label) parts.push(`<text transform="translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">${ay.label}</text>`);
   parts.push(`</svg>`);
   el.innerHTML = parts.join("");
+  el._sc = { W, H, m, x0, x1, y0, y1 };      // linear-axis scale, used by the drawing canvas of the gap challenge
 }
 function barChart(el, cats, groups, o = {}) {      // groups: [{label, values[], color}]
-  const W = 520, H = 320, m = { l: 52, r: 10, t: 12, b: 96 };
+  const W = 520, H = 320, m = { l: 84, r: 10, t: 12, b: 96 };
   const all = groups.flatMap((g) => g.values).filter(Number.isFinite);
   if (!all.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
   const ymax = Math.max(...all) * 1.08, yt = niceTicks(0, ymax), Y = (v) => H - m.b - v / ymax * (H - m.t - m.b);
@@ -588,11 +759,11 @@ function barChart(el, cats, groups, o = {}) {      // groups: [{label, values[],
   const p = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.label || "bar chart"}">`];
   for (const v of yt) if (v <= ymax) p.push(`<line class="gridline" x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${fmtTick(v)}</text>`);
   cats.forEach((c, i) => {
-    groups.forEach((g, j) => { const v = g.values[i]; if (!Number.isFinite(v)) return; const x = m.l + i * cw + cw * 0.1 + j * bw; p.push(`<rect x="${x}" y="${Y(v)}" width="${bw - 1}" height="${Y(0) - Y(v)}" fill="${g.color}"/>`); });
-    const cx = m.l + i * cw + cw / 2; p.push(`<text transform="translate(${cx} ${H - m.b + 10}) rotate(35)" text-anchor="start">${c}</text>`);
+    groups.forEach((g, j) => { const v = g.values[i]; if (!Number.isFinite(v)) return; const x = m.l + i * cw + cw * 0.1 + j * bw; p.push(`<rect x="${x}" y="${Y(v)}" width="${bw - 1}" height="${Y(0) - Y(v)}" rx="2" fill="${g.colors ? g.colors[i] : g.color}"><title>${c}: ${fmtTick(v)}</title></rect>`); });
+    const cx = m.l + i * cw + cw / 2; p.push(`<text transform="translate(${cx + 4} ${H - m.b + 12}) rotate(-35)" text-anchor="end">${c}</text>`);
   });
   p.push(`<g class="axis"><line x1="${m.l}" x2="${W - m.r}" y1="${Y(0)}" y2="${Y(0)}"/></g>`);
-  if (o.ylabel) p.push(`<text transform="translate(14 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">${o.ylabel}</text>`);
+  if (o.ylabel) p.push(`<text transform="translate(${m.l - 40} ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">${o.ylabel}</text>`);
   p.push("</svg>");
   el.innerHTML = p.join("");
 }
@@ -661,7 +832,7 @@ async function stepQC() {
   ]);
   const a = st.audit;
   table($("tblAudit"), [{ key: "k", label: "Check" }, { key: "v", label: "Result" }, { key: "s", label: "" }], [
-    { k: "Mean molecular mass", v: `${f(a.mean_molecular_mass_gmol, 3)} g/mol`, s: `<span class="pill ok">CO₂-rich air</span>` },
+    { k: "Mean molecular mass", v: `${f(a.mean_molecular_mass_gmol, 3)} g/mol`, s: a.mean_molecular_mass_gmol > 42 && a.mean_molecular_mass_gmol < 45 ? `<span class="pill ok">CO₂-rich air</span>` : `<span class="pill warn">unusual</span>` },
     { k: "Spread across profiles (IQR)", v: `${f(a.molecular_mass_IQR_gmol[0], 3)} – ${f(a.molecular_mass_IQR_gmol[1], 3)}`, s: "" },
     { k: "Reference scale height H<sub>ref</sub> (200 K)", v: `${f(a.H_ref_km, 2)} km`, s: "" },
     { k: "Largest ideal-gas deviation", v: a.ideal_gas_max_rel_dev.toExponential(1), s: `<span class="pill ${a.ideal_gas_max_rel_dev < 1e-3 ? "ok" : "warn"}">${a.ideal_gas_max_rel_dev < 1e-3 ? "exact" : "check"}</span>` },
@@ -859,7 +1030,7 @@ function drawSig() {
     { key: "ours_better_frac", label: "PINN better", fmt: (v) => f(v) },
     { key: "p_holm", label: "p (Holm)", fmt: (v, r) => `${fp(v)} ${r.significant ? `<span class="pill ${r.mean_diff > 0 ? "ok" : "bad"}">${r.mean_diff > 0 ? "better" : "worse"}</span>` : '<span class="pill warn">n.s.</span>'}` },
   ], sig, { empty: "Needs at least 3 test profiles." });
-  if (sig.length && sig[0].n_profiles < 6) $("tblSig").insertAdjacentHTML("beforeend", `<p class="status">With ${sig[0].n_profiles} test profiles no difference can reach p &lt; 0.05. Raise “Max test profiles” to 6 or more for real tests.</p>`);
+  if (sig.length && sig[0].n_profiles < 10) $("tblSig").insertAdjacentHTML("beforeend", `<p class="status">With ${sig[0].n_profiles} test profiles and Holm correction over ${sig.length} competitors, differences can rarely reach significance. Raise “Max test profiles” to about 10 or more for real tests.</p>`);
 }
 ["gsMetric", "gsLoc"].forEach((id) => $(id).addEventListener("change", drawGapSize));
 $("sigMetric").addEventListener("change", drawSig);
@@ -867,10 +1038,10 @@ $("sigMetric").addEventListener("change", drawSig);
 async function stepTune() {
   if (!st.nets) await stepTrain();
   const ids = st.split.val.slice(0, Math.max(4, num("benchMax")));
-  const cases = S.buildCases(st.byId, ids, [[10, "middle"], [10, "upper"], [10, "lower"]], num("minObs"));
-  const grid = [];
-  for (const alpha of [0.01, 0.1, 1]) grid.push({ fam: "mlp", alpha, lam: 0 });
-  for (const alpha of [0.01, 0.1, 1]) for (const lam of [0.1, 1]) grid.push({ fam: "pinn", alpha, lam });
+  const cases = S.buildCases(st.byId, ids, [[10, "middle"], [20, "lower"], [20, "upper"]], num("minObs"));   // the paper's tuning cases
+  const grid = [];   // the paper's alpha and lambda grid (early stopping is Python-only)
+  for (const alpha of [0, 0.1, 1]) grid.push({ fam: "mlp", alpha, lam: 0 });
+  for (const alpha of [0, 0.1, 1]) for (const lam of [0.1, 1]) grid.push({ fam: "pinn", alpha, lam });
   const out = [];
   for (let gi = 0; gi < grid.length; gi++) {
     const g = grid[gi]; status(`Tuning ${g.fam.toUpperCase()} α=${g.alpha} λ=${g.lam} (${gi + 1}/${grid.length})`);
@@ -989,7 +1160,7 @@ function yamlConfig() {
   const lines = [
     "# Generated by Martian Profile Gap Lab. Run with:  marspinn run --config this_file.yaml",
     `DATA_SOURCE: ${$("dataSource").value === "csv" ? "csv" : "synthetic"}`,
-    "DATA_LEVELS: data/mro_tps_combined.csv",
+    "DATA_LEVELS: data/processed/mro_tps_combined.csv",
     `SYNTH_PROFILES_PER_YEAR: [${num("nMY29")}, ${num("nMY30")}, ${num("nMY31")}]`,
     `SYNTH_SEED: ${num("synthSeed")}`, `SYNTH_NOISE_SCALE: ${num("synthNoise")}`,
     `SIGMA_T_MAX: ${num("sigTMax")}`, `MIN_LEVELS: ${num("minLevels")}`,
@@ -1028,8 +1199,160 @@ $("btnDownload").addEventListener("click", () => {
   $("exportInfo").textContent = `Download started: ${name}. If nothing happens here, use Copy.`;
 });
 
+// ------------------------------------------------------------------ overview: reported results on the real MRO data
+// Copied from results/tables/summary_overall.csv (full run, 28 test profiles, 330 gap cases).
+// [key, name, other profiles, physics, T MAE, lo, hi, P error %, lo, hi, n error %, hydrostatic residual RMS]
+const REPORTED = [
+  ["lin", "Linear", 0, 0, 3.969, 3.280, 4.738, 2.922, 2.595, 3.212, 4.552, 0.0701],
+  ["pchip", "PCHIP", 0, 0, 3.915, 3.248, 4.661, 2.625, 2.337, 2.881, 4.229, 0.0641],
+  ["hydro", "Hydrostatic int.", 0, 1, 3.915, 3.248, 4.661, 0.863, 0.636, 1.136, 2.250, 0.00310],
+  ["gp", "Gaussian process", 0, 0, 4.614, 3.933, 5.284, 4.669, 4.144, 5.131, 6.390, 0.1151],
+  ["eof", "EOF (opt. interp.)", 1, 0, 2.784, 2.426, 3.147, 1.897, 1.484, 2.399, 2.525, 0.1648],
+  ["rf", "Random forest", 1, 0, 3.357, 2.818, 3.938, 4.854, 3.857, 6.019, 4.536, 0.3775],
+  ["mlp_zs", "MLP (zero-shot)", 1, 0, 3.632, 3.019, 4.330, 5.215, 4.026, 6.544, 5.079, 0.1185],
+  ["pinn_zs", "PINN (zero-shot)", 1, 1, 3.578, 2.962, 4.266, 2.676, 2.025, 3.428, 2.297, 0.01202],
+  ["mlp_ft", "MLP (fine-tuned)", 1, 0, 3.332, 2.784, 3.971, 7.575, 6.381, 8.757, 7.937, 0.1669],
+  ["pinn_ft", "PINN (fine-tuned)", 1, 1, 3.176, 2.705, 3.716, 0.826, 0.695, 0.954, 1.723, 0.003135],
+  ["mlp_rft", "MLP (reg. fine-tuned)", 1, 0, 2.854, 2.315, 3.447, 4.442, 3.345, 5.755, 5.097, 0.1197],
+  ["pinn_rft", "PINN (reg. fine-tuned)", 1, 1, 3.002, 2.430, 3.637, 1.008, 0.845, 1.182, 1.921, 0.01012],
+].map(([k, method, other, physics, T, Tlo, Thi, P, Plo, Phi, n, H]) => ({ k, method, other, physics, T, T_lo: Tlo, T_hi: Thi, P, P_lo: Plo, P_hi: Phi, n, H }));
+function drawHome() {
+  const met = $("homeMetric").value, label = $("homeMetric").selectedOptions[0].text;
+  const rows = REPORTED.slice().sort((a, b) => a[met] - b[met]);
+  barChart($("chHome"), rows.map((r) => r.method), [{ label, colors: rows.map((r) => colorOf(r.k)), values: rows.map((r) => r[met]) }], { ylabel: label, label: "reported error by method" });
+  const yes = (v) => (v ? '<span class="yes" aria-label="yes">✓</span>' : "");
+  table($("tblHome"), [
+    { key: "method", label: "Method" }, { key: "other", label: "Other profiles", fmt: yes }, { key: "physics", label: "Physics", fmt: yes },
+    { key: "T", label: "T MAE (K)", fmt: ciFmt("T"), best: "min" }, { key: "P", label: "P error (%)", fmt: ciFmt("P"), best: "min" },
+    { key: "n", label: "n error (%)", fmt: (v) => f(v), best: "min" }, { key: "H", label: "Hydro. residual", fmt: (v) => fp(v), best: "min" },
+  ], REPORTED, { rowClass: (r) => (r.k === "pinn_rft" ? "ours" : "") });
+}
+$("homeMetric").addEventListener("change", drawHome);
+$("homeFlow").innerHTML = STEPS.map(([k, label], i) => `${i ? '<span class="arrow" aria-hidden="true">→</span>' : ""}<button data-goto="${k}">${i + 1}. ${label}</button>`).join("");
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-goto]"); if (b) show(b.dataset.goto); });
+window.addEventListener("hashchange", () => { const k = location.hash.slice(1); if ([...EXTRA, ...STEPS].some((s) => s[0] === k)) show(k); });
+
+// ------------------------------------------------------------------ gap challenge
+const GM_LEVELS = { easy: [[5, "middle"]], medium: [[10, "middle"]], hard: [[10, "upper"], [10, "lower"]], expert: [[18, "middle"], [18, "upper"], [18, "lower"]] };
+const gm = { round: null, guess: null, result: null, last: null };
+const gmStore = () => { try { return JSON.parse(localStorage.getItem("gaplab-game") || "{}"); } catch (e) { return {}; } };
+const gmSave = (s) => { try { localStorage.setItem("gaplab-game", JSON.stringify(s)); } catch (e) { /* storage unavailable */ } };
+function gmNew() {
+  if (!st.split) return;
+  const pool = st.split.test.concat(st.split.val), opts = GM_LEVELS[$("gmLevel").value];
+  let round = null;
+  for (let tries = 0; tries < 60 && !round; tries++) {
+    const p = st.byId[pool[Math.floor(Math.random() * pool.length)]], [size, loc] = opts[Math.floor(Math.random() * opts.length)];
+    const gap = S.makeGap(p.z, size, loc, num("minObs"));
+    if (gap) { const hidIdx = gap.map((g, i) => (g ? i : -1)).filter((i) => i >= 0); round = { p, gap, size, loc, hidIdx, zh: hidIdx.map((i) => p.z[i]) }; }
+  }
+  if (!round) { $("gmHint").textContent = "No profile is long enough for this difficulty; try an easier level."; return; }
+  const T = round.p.T; round.xr = [Math.floor(Math.min(...T) / 10) * 10 - 20, Math.ceil(Math.max(...T) / 10) * 10 + 20];
+  gm.round = round; gm.guess = round.zh.map(() => NaN); gm.result = null; gm.last = null;
+  $("gmResult").innerHTML = '<div class="empty">Draw your guess across the shaded band, then press Reveal.</div>';
+  drawGame();
+}
+function drawGame() {
+  const R = gm.round; if (!R) return;
+  const { p, gap, zh } = R, done = !!gm.result;
+  const L = [{ type: "hspan", y0: Math.min(...zh), y1: Math.max(...zh) },
+    { type: "line", x: p.T.map((t, i) => (gap[i] ? NaN : t)), y: p.z, color: "var(--ink)", width: 2 }];
+  const leg = [["Observed", "var(--ink)"]];
+  if (done) {
+    for (const [k, pr] of Object.entries(gm.result.preds)) L.push({ type: "line", x: pr.T, y: zh, color: colorOf(k), width: 1.4, opacity: 0.9 });
+    L.push({ type: "line", x: gm.result.ref.T, y: zh, color: "var(--ink)", width: 2.6, dash: "5 3" });
+    leg.push(["Truth", "var(--ink)", true], ...Object.keys(gm.result.preds).map((k) => [S.METHODS[k], colorOf(k)]));
+  }
+  L.push({ type: "line", x: gm.guess, y: zh, color: "var(--stage-game)", width: 3.4 });
+  L.push({ type: "scatter", x: gm.guess, y: zh, color: "var(--stage-game)", r: 2.6, opacity: 1 });
+  leg.push(["Your guess", "var(--stage-game)"]);
+  plot($("chGame"), { width: 520, height: 460, label: "draw temperature across the gap", x: { label: "Temperature (K)", min: R.xr[0], max: R.xr[1] }, y: { label: "Geopotential height Z (km)", min: p.zMin - 0.5, max: p.zMax + 0.5 }, layers: L });
+  $("legGame").innerHTML = legendHTML(leg);
+  $("chGame").classList.toggle("locked", done);
+  const drawn = gm.guess.filter(Number.isFinite).length;
+  $("gmHint").textContent = done ? "Press New profile for another round." :
+    `${R.size} km ${R.loc} gap · ${R.loc === "middle" ? "data above and below: interpolate" : "data on one side only: extrapolate"} · drawn ${Math.round(100 * drawn / zh.length)} % of the gap`;
+  const s = gmStore();
+  $("gmStats").innerHTML = [["Rounds", s.rounds || 0], ["Average score", s.rounds ? Math.round(s.points / s.rounds) : "–"], ["Best T error", s.best ? `${f(s.best)} K` : "–"], ["Rounds topped", s.wins || 0]]
+    .map(([k, v]) => `<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join("");
+}
+function gmPoint(ev) {
+  const el = $("chGame"), svg = el.querySelector("svg"), sc = el._sc; if (!svg || !sc) return null;
+  const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * sc.W / r.width, py = (ev.clientY - r.top) * sc.H / r.height;
+  return { T: sc.x0 + (px - sc.m.l) / (sc.W - sc.m.l - sc.m.r) * (sc.x1 - sc.x0), z: sc.y0 + (sc.H - sc.m.b - py) / (sc.H - sc.m.t - sc.m.b) * (sc.y1 - sc.y0) };
+}
+function gmPaint(pt) {
+  const R = gm.round, zh = R.zh, dz = zh.length > 1 ? Math.abs(zh[1] - zh[0]) : 0.5;
+  if (pt.z < Math.min(...zh) - 2 * dz || pt.z > Math.max(...zh) + 2 * dz) { gm.last = null; return; }
+  const a = gm.last || pt, lo = Math.min(a.z, pt.z) - dz / 2, hi = Math.max(a.z, pt.z) + dz / 2;
+  zh.forEach((z, k) => { if (z >= lo && z <= hi) gm.guess[k] = a.z === pt.z ? pt.T : a.T + (pt.T - a.T) * (z - a.z) / (pt.z - a.z); });
+  gm.last = pt; drawGame();
+}
+$("chGame").addEventListener("pointerdown", (ev) => { if (!gm.round || gm.result) return; ev.preventDefault(); $("chGame").setPointerCapture(ev.pointerId); gm.last = null; const p = gmPoint(ev); if (p) gmPaint(p); });
+$("chGame").addEventListener("pointermove", (ev) => { if (!$("chGame").hasPointerCapture(ev.pointerId)) return; const p = gmPoint(ev); if (p) gmPaint(p); });
+$("chGame").addEventListener("pointerup", () => (gm.last = null));
+function gmPressure(R, T) {          // integrate hydrostatic balance through the drawn temperature from the observed edge of the gap
+  const { p, hidIdx } = R, below = hidIdx[0] - 1;
+  if (below >= 0) return S.integrateLnP([p.z[below], ...R.zh], [p.T[below], ...T], p.lnP[below]).slice(1);
+  const above = hidIdx[hidIdx.length - 1] + 1, zr = R.zh.slice().reverse(), Tr = T.slice().reverse();
+  return S.integrateLnP([p.z[above], ...zr], [p.T[above], ...Tr], p.lnP[above]).slice(1).reverse();
+}
+async function gmReveal() {
+  const R = gm.round; if (!R || gm.result) return;
+  const xp = [], fp = [];
+  gm.guess.forEach((v, k) => { if (Number.isFinite(v)) { xp.push(R.zh[k]); fp.push(v); } });
+  if (xp.length < Math.max(2, 0.5 * R.zh.length)) { $("gmHint").textContent = "Draw across at least half of the shaded band first."; return; }
+  const T = R.zh.map((z) => S.interp(z, xp, fp));
+  gm.guess = T;
+  if (!st.eof) st.eof = { T: S.fitEOF(st.trainP, "T"), P: S.fitEOF(st.trainP, "lnP") };
+  const methods = ["lin", "pchip", "hydro", "gp", "eof"];
+  if (st.nets) methods.push("mlp_zs", "pinn_zs", "mlp_rft", "pinn_rft");
+  $("gmHint").textContent = st.nets ? "Fine-tuning the networks on this profile…" : "Scoring…"; await tick();
+  const r = await S.runCase(R.p, R.gap, { norm: st.norm || S.computeNorm(st.trainP), nets: st.nets, eof: st.eof },
+    { methods, hp: hpNow(), ftSteps: num("ftSteps"), ftLr: num("ftLr"), noise: 0, seed: S.hashSeed(`${R.p.id}|${R.size}|${R.loc}`), members: num("nnMembers") });
+  gm.result = r;
+  const you = S.caseMetrics(r.ref, { T, P: gmPressure(R, T) });
+  const rows = [{ name: "You", k: "you", ...you }, ...Object.entries(r.preds).map(([k, pr]) => ({ name: S.METHODS[k], k, ...S.caseMetrics(r.ref, pr) }))].sort((a, b) => a.T_MAE - b.T_MAE);
+  const rank = rows.findIndex((x) => x.k === "you") + 1, score = Math.round(100 * Math.exp(-you.T_MAE / 4));
+  const pinn = rows.find((x) => x.k === "pinn_rft"), best = rows.find((x) => x.k !== "you");
+  const msg = rank === 1 ? `Top of the board: you beat all ${rows.length - 1} methods on this gap.`
+    : `You placed ${rank} of ${rows.length}. ${best.name} led with ${f(best.T_MAE)} K.`;
+  const extra = pinn ? ` The physics-informed network scored ${f(pinn.T_MAE)} K.` : " Pre-train the networks in step 5 to add the MLP and PINN to the scoreboard.";
+  $("gmResult").innerHTML = `<div class="verdict ${rank === 1 ? "win" : ""}"><div class="score">${score}<small>points</small></div><div><b>${msg}</b><br><span class="lede">Your temperature error ${f(you.T_MAE)} K; your pressure error ${f(you.P_relMAE)} %, from hydrostatic balance alone.${extra}</span></div></div><div class="tbl" id="tblGame"></div>`;
+  table($("tblGame"), [{ key: "name", label: "Rank" , fmt: (v, x) => `${rows.indexOf(x) + 1}. ${v}` }, { key: "T_MAE", label: "T MAE (K)", fmt: (v) => f(v), best: "min" },
+    { key: "P_relMAE", label: "P error (%)", fmt: (v) => f(v), best: "min" }], rows, { rowClass: (x) => (x.k === "you" ? "you" : x.k === "pinn_rft" ? "ours" : "") });
+  const s = gmStore(); s.rounds = (s.rounds || 0) + 1; s.points = (s.points || 0) + score; s.wins = (s.wins || 0) + (rank === 1 ? 1 : 0); s.best = Math.min(s.best || Infinity, you.T_MAE); gmSave(s);
+  if (rank === 1) celebrate();
+  log(`Gap challenge: ${R.p.id}, ${R.size} km ${R.loc}; you ${f(you.T_MAE)} K, rank ${rank}/${rows.length}.`);
+  drawGame();
+}
+function celebrate() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cols = ["var(--mars)", "var(--accent)", "var(--accent2)", "var(--stage-game)", "var(--ok)"];
+  for (let i = 0; i < 40; i++) {
+    const d = document.createElement("i"); d.className = "sparkle";
+    d.style.cssText = `left:${10 + Math.random() * 80}vw;top:${10 + Math.random() * 20}vh;background:${cols[i % cols.length]};--dx:${(Math.random() - 0.5) * 30}vw;animation-delay:${Math.random() * 0.3}s`;
+    document.body.appendChild(d); setTimeout(() => d.remove(), 1900);
+  }
+}
+$("btnGmNew").addEventListener("click", gmNew);
+$("gmLevel").addEventListener("change", gmNew);
+$("btnGmClear").addEventListener("click", () => { if (!gm.round || gm.result) return; gm.guess = gm.round.zh.map(() => NaN); drawGame(); });
+$("btnGmReveal").addEventListener("click", () => guard("game", gmReveal));
+
+// ------------------------------------------------------------------ citation and theme
+$("btnCite").addEventListener("click", () => { $("citeInfo").textContent = ""; $("citeDlg").showModal(); });
+$("btnCiteClose").addEventListener("click", () => $("citeDlg").close());
+$("btnCiteCopy").addEventListener("click", () => navigator.clipboard?.writeText($("citeText").textContent).then(() => ($("citeInfo").textContent = "Copied"), () => ($("citeInfo").textContent = "Select the text and copy it")));
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+try { applyTheme(localStorage.getItem("gaplab-theme")); } catch (e) { /* storage unavailable */ }
+$("btnTheme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const t = dark ? "light" : "dark"; applyTheme(t); try { localStorage.setItem("gaplab-theme", t); } catch (e) { /* storage unavailable */ }
+});
+
 // ------------------------------------------------------------------ wiring
-const wire = (id, step, fn) => $(id).addEventListener("click", () => guard(step, fn));
+const wire =(id, step, fn) => $(id).addEventListener("click", () => guard(step, fn));
 wire("btnData", "data", stepData); wire("btnQC", "qc", stepQC); wire("btnSplit", "split", stepSplit);
 wire("btnTrain", "train", stepTrain); wire("btnRecon", "recon", stepRecon); wire("btnBench", "bench", stepBench);
 wire("btnTune", "bench", stepTune); wire("btnCalib", "bench", stepCalib);
@@ -1050,11 +1373,12 @@ watch(["nnHidden", "nnDepth", "nnMembers", "nnSteps", "nnLr", "nnBatch", "nnLam"
 
 // boot: realistic working state (synthetic data, QC and split done instantly)
 (async function boot() {
-  renderNav();
-  let start = "data"; try { start = localStorage.getItem("gaplab-step") || "data"; } catch (e) { /* storage unavailable */ }
-  if (location.hash && STEPS.some((s) => s[0] === location.hash.slice(1))) start = location.hash.slice(1);
+  drawHome();
+  let start = "home"; try { start = localStorage.getItem("gaplab-step") || "home"; } catch (e) { /* storage unavailable */ }
+  if (location.hash && [...EXTRA, ...STEPS].some((s) => s[0] === location.hash.slice(1))) start = location.hash.slice(1);
+  show("home");
   await stepData(); await stepQC(); await stepSplit();
-  show(start); status("Synthetic archive loaded. Pre-train the networks in step 5, or press Run full workflow.");
+  show(start); status("Synthetic archive loaded");
 })();
 </script>
 </body>
