@@ -248,4 +248,5 @@ pressure given temperature, not temperature itself.
 ## Citation
 
 See `CITATION.cff`. Data: Hinson, D. P., MRO Radio Science temperature–pressure profiles, `MRO-M-RSS-5-TPS-V1.0`,
-NASA Planetary Data System.
+NASA Planetary Data System, Atmospheres Node, https://atmos.nmsu.edu/PDS/data/mrors_2001/. The PDS DOI registry lists
+no DOI for this data set, so the archive volume is cited instead.
