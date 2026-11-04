@@ -2,7 +2,7 @@
 
 **Physics-informed reconstruction of missing intervals in Martian radio-occultation temperature and pressure profiles.**
 
-Authors: Shailendra Dabral, Keshav Aggrawal, Soumyaneal Banerjee · License: MIT
+Authors: Shailendra Dabral, Keshav Aggarwal, Soumyaneal Banerjee · License: MIT
 
 This repository contains the complete workflow of the study in two forms you can control:
 
@@ -131,11 +131,11 @@ marspinn run --config configs/paper.yaml         # paper protocol on the real da
 # control individual steps and settings
 marspinn run --config configs/quick.yaml --steps e1 report
 marspinn run --config configs/quick.yaml --set GAP_SIZES_KM=[10,20] LAMBDA_PHYS=10 SEEDS=[0,1,2]
-marspinn run --csv data/mro_tps_combined.csv --quick
+marspinn run --csv data/processed/mro_tps_combined.csv --quick
 
 # utilities
 marspinn synth --out data/synthetic_tps.csv      # write a synthetic archive in the MRO CSV format
-marspinn audit --csv data/mro_tps_combined.csv   # quality control + physics audit only
+marspinn audit --csv data/processed/mro_tps_combined.csv   # quality control + physics audit only
 ```
 
 From Python:
@@ -223,11 +223,12 @@ docs/                 interactive simulator (index.html, sim-core.js) — served
 src/marspinn/         Python package: config, physics, synthetic, data, baselines, nn, benchmark, metrics, plots, pipeline, cli
 configs/              quick, demo, synthetic_full, paper
 tests/                pytest suite (Python) and test_sim_core.mjs (JavaScript)
-notebooks/            original research notebook with outputs
-paper/                LaTeX manuscript, figures and compiled PDF
-data/                 put mro_tps_combined.csv here (see data/README.md)
-scripts/              run_quick.sh, serve_simulator.sh, push_to_github.sh
-.github/workflows/    tests on every push; Pages deployment of docs/
+notebooks/            research notebooks; physics-informed-nn.ipynb is the executed run behind the reported results
+paper/figures/        figures prepared for the manuscript
+results/              figures, tables and summary of the reported full run
+data/processed/       combined MRO profiles (mro_tps_combined.csv) and per-profile table (see data/README.md)
+scripts/              run_quick.sh, serve_simulator.sh, mro_tps_loader.py (builds the combined CSV from PDS TPS files)
+.github/workflows/    Pages deployment of docs/
 ```
 
 ## Tests
@@ -237,21 +238,12 @@ pytest -q                          # Python: physics, baselines, gradients, stat
 node tests/test_sim_core.mjs       # JavaScript engine: physics audit, gradient check, short training
 ```
 
-## Uploading to GitHub
-
-```bash
-# create an empty repository on github.com first (no README), then:
-scripts/push_to_github.sh https://github.com/<user>/mars-pinn-gapfill.git
-```
-
-Or with the GitHub CLI: `gh repo create mars-pinn-gapfill --public --source . --push`.
-
 ## Limitations
 
 The real data cover pre-dawn ingress occultations in northern spring and summer (L_s ≈ 21°–142°) between about
 13° S and 69° N. The reference is a retrieval that itself uses hydrostatic balance and the ideal-gas law, so
 physical-consistency results measure agreement with the retrieval physics. Gaps are synthetic. Physics constrains
-pressure given temperature, not temperature itself. See the paper (`paper/manuscript.pdf`) for the full discussion.
+pressure given temperature, not temperature itself.
 
 ## Citation
 

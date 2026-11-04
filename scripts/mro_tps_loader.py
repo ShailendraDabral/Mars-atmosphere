@@ -9,8 +9,8 @@ the two missions used different reference values.
 HOW TO USE
   1. Put the path of each month folder in MONTH_FOLDERS below.
   2. Set OUTPUT_DIR.
-  3. Run:  python mro_tps_loader.py
-     (or in a notebook:  %run mro_tps_loader.py)
+  3. Run:  python scripts/mro_tps_loader.py
+     (or in a notebook:  %run scripts/mro_tps_loader.py)
 
 Each folder is searched (including its sub-folders) for .TPS / .tps files. Folders can hold MRO data,
 MGS data, or both.
@@ -20,7 +20,7 @@ All profiles are combined and written to OUTPUT_DIR:
   - mro_tps_profiles.csv : one row per profile (metadata + quality/physics checks).
 
 You can also pass folders on the command line instead of editing the list:
-  python mro_tps_loader.py /path/month1 /path/month2 --out ./processed
+  python scripts/mro_tps_loader.py /path/month1 /path/month2 --out ./processed
 """
 
 # ============================ EDIT THESE ============================

@@ -1,7 +1,7 @@
 # Results
 
-Outputs of the reported full run (Kaggle GPU, 394.7 min; notebook in `../release_assets/` of the
-GitHub Release). Every number in the paper should be traceable to a file here.
+Outputs of the reported full run (Kaggle GPU, 394.7 min; executed notebook in
+`../notebooks/physics-informed-nn.ipynb`). Every number in the paper should be traceable to a file here.
 
 | File | Content |
 |---|---|
