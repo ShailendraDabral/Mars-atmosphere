@@ -3,10 +3,10 @@
 Examples
 --------
     marspinn run --config configs/quick.yaml                 # full workflow, fast settings
-    marspinn run --config configs/paper.yaml --data csv --csv data/mro_tps_combined.csv
+    marspinn run --config configs/paper.yaml --data csv --csv data/processed/mro_tps_combined.csv
     marspinn run --steps data split pretrain e1 report --set SEEDS=[0,1] GAP_SIZES_KM=[5,10]
     marspinn synth --out data/synthetic_tps.csv --set SYNTH_SEED=3
-    marspinn audit --data csv --csv data/mro_tps_combined.csv
+    marspinn audit --data csv --csv data/processed/mro_tps_combined.csv
     marspinn steps
 """
 from __future__ import annotations
