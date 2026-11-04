@@ -19,7 +19,7 @@ import pandas as pd
 from . import plots
 from .baselines import fit_eof_pair, fit_rf
 from .benchmark import NAMES, OURS, Runner
-from .config import save_config
+from .config import config_hash, save_config
 from .data import (build_cases, load_raw, physics_audit, preprocess, quality_control,
                    stratified_profile_split)
 from .metrics import (POINT_METRICS, compute_metrics, conformal_coverage, fit_conformal, paired_tests,
@@ -132,8 +132,9 @@ class Pipeline:
         if cfg["HP_OVERRIDE"]:
             HP = cfg["HP_OVERRIDE"]
             self.log("Using HP_OVERRIDE:", HP)
-        elif hp_file.exists():
+        elif hp_file.exists() and json.load(open(hp_file)).get("config_hash") == config_hash(cfg):
             HP = json.load(open(hp_file))
+            HP.pop("config_hash")
             self.log("Loaded selected hyper-parameters:", HP)
         else:
             tune_cases = build_cases(self.val_df, self.VAL_IDS, cfg["TUNE_CONFIGS"], cfg["MIN_OBSERVED_KM"])
@@ -161,7 +162,7 @@ class Pipeline:
             for fam, g in T.groupby("family"):
                 r = g.loc[g["score"].idxmin()]
                 HP[fam] = dict(lam=float(r["lam"]), alpha=float(r["alpha"]), es=bool(r["es"]))
-            json.dump(HP, open(hp_file, "w"), indent=2)
+            json.dump({**HP, "config_hash": config_hash(cfg)}, open(hp_file, "w"), indent=2)
         self.runner.HP = self.HP = HP
         self.R["HP"] = HP
         self.log("Selected (validation):", HP)

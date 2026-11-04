@@ -122,7 +122,7 @@ def fit_conformal(pw_cal):
         for var, r in zip(("T", "P"), _scores(g)):
             n = len(r)
             for q in QGRID:
-                Q[(m, loc, var, float(q))] = np.quantile(r, min(1.0, np.ceil((n + 1) * q) / n))
+                Q[(m, loc, var, float(q))] = np.quantile(r, min(1.0, np.ceil((n + 1) * q) / n), method="higher")
     return Q
 
 
