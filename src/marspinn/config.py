@@ -15,7 +15,7 @@ import yaml
 DEFAULTS: dict = dict(
     # ---- data ----
     DATA_SOURCE="synthetic",          # "synthetic" or "csv"
-    DATA_LEVELS="data/mro_tps_combined.csv",
+    DATA_LEVELS="data/processed/mro_tps_combined.csv",
     OUTPUT_DIR="results",
     SYNTH_PROFILES_PER_YEAR=[65, 46, 73],   # MY29, MY30, MY31 (mirrors the real archive)
     SYNTH_SEED=7,

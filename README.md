@@ -1,259 +1,324 @@
-# Martian Profile Gap Lab https://shailendradabral.github.io/Mars-atmosphere/
+<div align="center">
 
-**Physics-informed reconstruction of missing intervals in Martian radio-occultation temperature and pressure profiles.**
+# Physics-Informed Reconstruction of Missing Intervals in Martian Radio-Occultation Profiles
 
-Authors: Shailendra Dabral, Keshav Aggrawal, Soumyaneal Banerjee · License: MIT
+**Shailendra Dabral · Keshav Agrawal · Soumyaneal Banerjee**
 
-This repository contains the complete workflow of the study in two forms you can control:
+[![Tests](https://github.com/ShailendraDabral/Mars-atmosphere/actions/workflows/tests.yml/badge.svg)](https://github.com/ShailendraDabral/Mars-atmosphere/actions/workflows/tests.yml)
+[![Simulator](https://img.shields.io/badge/interactive%20simulator-live-5b63f0)](https://shailendradabral.github.io/Mars-atmosphere/)
+[![Python](https://img.shields.io/badge/python-3.9%2B-3776ab)](pyproject.toml)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Data: NASA PDS](https://img.shields.io/badge/data-MRO--M--RSS--5--TPS--V1.0-orange)](data/README.md)
 
-| | What it is | How to use it |
-|---|---|---|
-| **Interactive simulator** (`docs/`) | A web app that runs the whole workflow in your browser: data, quality control, splits, gaps, neural-network training, reconstruction, benchmark, statistics, calibration and robustness experiments. No installation. | Open `docs/index.html`, or the GitHub Pages site once enabled |
-| **Python pipeline** (`src/marspinn/`) | The research code behind the paper, as a package with a command-line tool. Every setting is in a YAML config and every step can be run on its own. | `marspinn run --config configs/quick.yaml` |
+[**Interactive simulator**](https://shailendradabral.github.io/Mars-atmosphere/) ·
+[Results](results/) ·
+[Notebooks](notebooks/) ·
+[Data](data/) ·
+[Citation](#citation)
 
-Both run on **synthetic** Mars profiles out of the box and on the **real** MRO Radio Science data when you supply it.
-
-![Benchmark panel of the simulator](docs/img/benchmark.png)
-
----
-
-## The idea in plain words
-
-Spacecraft around Mars measure how temperature and pressure change with height by watching a radio signal bend as it
-passes through the thin atmosphere (*radio occultation*). Sometimes a stretch of a profile is missing or unreliable.
-We compare twelve ways of filling in the missing stretch. One of them is a **physics-informed neural network (PINN)**:
-a neural network that is also penalised whenever its output breaks **hydrostatic balance** (pressure at any height
-supports the weight of the air above). The **ideal-gas law** (pressure = density × Boltzmann constant × temperature)
-is built in exactly.
-
-The main finding: the physics makes **pressure and density** reconstructions far more accurate and self-consistent
-than an identical network without physics, but it does not by itself tell you the **temperature** — for that, the
-statistical knowledge learned from many profiles matters most.
+</div>
 
 ---
 
-## The workflow
+## Abstract
+
+Radio-occultation (RO) soundings from the Mars Reconnaissance Orbiter (MRO) Radio Science experiment provide
+vertical profiles of temperature, pressure and number density, but individual profiles can contain missing or
+unreliable intervals. We benchmark **twelve methods** for reconstructing such gaps — interpolation, hydrostatic
+integration, Gaussian processes, EOF optimal interpolation, random forests, and data-only (MLP) and
+**physics-informed neural networks (PINNs)** under zero-shot, fine-tuned and L2-SP-regularised fine-tuning
+regimes. The PINN enforces the ideal-gas law exactly through its output parameterisation and penalises violations
+of hydrostatic balance in geopotential coordinates.
+
+On **185 MRO RSS profiles** (Mars years 29–31) with a leakage-free, profile-level split and **330 synthetic gap
+cases** (2–20 km; lower, middle and upper atmosphere), the physics constraint makes **pressure and density**
+reconstructions markedly more accurate and physically self-consistent than an identical data-only network
+(pressure error 1.0 % vs 4.4 %; hydrostatic residual 0.010 vs 0.12). **Temperature** inside a gap, however, is
+not determined by hydrostatics: the best temperature skill comes from statistical priors learned across profiles
+(EOF optimal interpolation, 2.78 K MAE), and the PINN is statistically indistinguishable from it. Split-conformal
+calibration on validation profiles brings the PINN's 95 % intervals from 73 % to 92 % empirical coverage.
+
+<p align="center">
+  <img src="results/figures/fig03_error_vs_gap_size.png" width="92%" alt="Reconstruction error versus gap size and location for all methods">
+  <br><em>Reconstruction error versus gap size, by gap location (test profiles, 95 % bootstrap CIs).</em>
+</p>
+
+## Contents
+
+- [Key results](#key-results)
+- [Method](#method)
+- [Repository structure](#repository-structure)
+- [Installation](#installation)
+- [Reproducing the results](#reproducing-the-results)
+- [Interactive simulator](#interactive-simulator)
+- [Data](#data)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Limitations](#limitations)
+- [Citation](#citation)
+- [License and acknowledgements](#license-and-acknowledgements)
+
+## Key results
+
+Test set: 28 unseen profiles, 330 gap cases. Mean over profiles; brackets give 95 % profile-level bootstrap CIs.
+Full table: [`results/tables/summary_overall.csv`](results/tables/summary_overall.csv); all statistical statements:
+[`results/results_summary.md`](results/results_summary.md).
+
+| Method | Uses other profiles | Uses physics | T MAE (K) | P error (%) | n error (%) | Hydrostatic residual (RMS) |
+|---|:-:|:-:|---|---:|---:|---:|
+| Linear | | | 3.97 [3.28, 4.74] | 2.92 | 4.55 | 0.070 |
+| PCHIP | | | 3.91 [3.25, 4.66] | 2.63 | 4.23 | 0.064 |
+| Hydrostatic integration | | ✓ | 3.91 [3.25, 4.66] | 0.86 | 2.25 | 0.0031 |
+| Gaussian process | | | 4.61 [3.93, 5.28] | 4.67 | 6.39 | 0.115 |
+| EOF optimal interpolation | ✓ | | **2.78 [2.43, 3.15]** | 1.90 | 2.52 | 0.165 |
+| Random forest | ✓ | | 3.36 [2.82, 3.94] | 4.85 | 4.54 | 0.378 |
+| MLP (zero-shot) | ✓ | | 3.63 [3.02, 4.33] | 5.22 | 5.08 | 0.119 |
+| PINN (zero-shot) | ✓ | ✓ | 3.58 [2.96, 4.27] | 2.68 | 2.30 | 0.012 |
+| MLP (fine-tuned) | ✓ | | 3.33 [2.78, 3.97] | 7.58 | 7.94 | 0.167 |
+| PINN (fine-tuned) | ✓ | ✓ | 3.18 [2.70, 3.72] | **0.83** | **1.72** | 0.0031 |
+| MLP (L2-SP fine-tuned) | ✓ | | 2.85 [2.32, 3.45] | 4.44 | 5.10 | 0.120 |
+| **PINN (L2-SP fine-tuned)** | ✓ | ✓ | 3.00 [2.43, 3.64] | 1.01 | 1.92 | 0.010 |
+
+Reference retrieval hydrostatic-residual floor: 0.0016.
+
+**Findings** (paired Wilcoxon tests, Holm-corrected, α = 0.05):
+
+1. **Pressure and density.** The regularised PINN is significantly better than every data-only method for pressure,
+   and is statistically tied with exact hydrostatic integration.
+2. **Temperature.** The regularised PINN beats interpolation, hydrostatic integration and the GP, but is not
+   significantly different from EOF optimal interpolation or the data-only networks: the physics constrains
+   *P* given *T*, not *T* itself.
+3. **Physical consistency.** Hydrostatic residuals of the PINN are an order of magnitude below those of the matched
+   data-only MLP.
+4. **Uncertainty.** Raw ensemble intervals are over-confident (73 % coverage at nominal 95 %); split-conformal
+   calibration fixes coverage (92 % T, 94 % ln P).
+
+<p align="center">
+  <img src="results/figures/fig02_example_reconstructions.png" width="92%" alt="Example reconstructions of temperature and pressure across a gap">
+</p>
+
+## Method
+
+**Vertical coordinate.** Geopotential height *Z* = Φ / g₀ (g₀ = 3.71 m s⁻²), in which hydrostatic balance is exact.
+
+**Network.** An MLP maps (*Z*, latitude, sin/cos longitude, sin/cos *L*ₛ) to (*T*, ln *P*). Number density is derived,
+so the ideal-gas law holds by construction:
+
+$$n = \frac{P}{k_B T}$$
+
+**Physics loss.** Hydrostatic balance, $\dfrac{d\ln P}{dZ} = -\dfrac{\bar m g_0}{k_B T}$, is enforced through the
+dimensionless residual
+
+$$r = H_{\mathrm{ref}}\,\frac{d\ln P}{dZ} + \frac{T_{\mathrm{ref}}}{T}, \qquad T_{\mathrm{ref}} = 200\ \mathrm{K},\ H_{\mathrm{ref}} \approx 10.3\ \mathrm{km},$$
+
+evaluated by automatic differentiation at collocation points. The training loss is
+
+$$\mathcal{L} = \mathcal{L}_{\mathrm{data}}^{\sigma\text{-weighted}} + \lambda\,\overline{r^2} + \alpha\,\lVert\theta - \theta_{\mathrm{pre}}\rVert^2 ,$$
+
+where the last (L2-SP) term applies only during per-profile regularised fine-tuning. λ = 0 gives the matched
+data-only MLP. α and λ are selected on validation profiles only.
+
+**Protocol.**
 
 ```mermaid
 flowchart LR
-  A[Data<br/>synthetic or MRO CSV] --> B[Quality control<br/>+ physics audit]
-  B --> C[Split by profile<br/>train / val / test]
-  C --> D[Gap scenarios<br/>2–20 km, lower / middle / upper]
-  C --> E[Pre-train MLP + PINN<br/>fit EOF prior]
-  E --> F[Tune α, λ<br/>on validation]
-  D --> G[E1 benchmark<br/>12 methods]
+  A[MRO RSS profiles] --> B[Quality control<br/>+ physics audit]
+  B --> C[Profile-level split<br/>train / val / test]
+  C --> D[Gap scenarios<br/>2–20 km × lower / middle / upper]
+  C --> E[Pre-train MLP + PINN ensembles<br/>fit EOF prior, RF]
+  E --> F[Tune α, λ on validation]
+  D --> G[E1 benchmark · 12 methods]
   F --> G
-  G --> H[Conformal calibration<br/>on validation]
-  F --> I[E2 noise · E3 λ sweep · E4 unseen Mars year]
-  G --> J[Report<br/>figures, tables, summary]
+  G --> H[Conformal calibration]
+  F --> I[E2 noise · E3 λ sweep · E4 Mars-year hold-out]
+  G --> J[Figures · tables · summary]
   H --> J
   I --> J
 ```
 
-| Step | Python step | Simulator step | What happens |
-|---|---|---|---|
-| Data | `data` | 1 | Load the MRO CSV or generate a synthetic archive with the same columns and coverage |
-| Quality control | `data` | 2 | Drop levels with σ_T > 5 K (top initialisation zone), require monotonic height and ≥ 40 levels; recover the retrieval's molecular mass and the hydrostatic residual floor |
-| Split | `split` | 3 | Whole profiles → train / validation / test, stratified by Mars year |
-| Gaps | `split` | 4 | Hide 2, 5, 10 or 20 km at the bottom, middle or top of each test profile |
-| Pre-train | `pretrain` | 5 | Train MLP (λ = 0) and PINN (λ > 0) ensembles on training profiles; fit EOF prior and random forest |
-| Tune | `tune` | 7 (button) | Choose L2-SP strength α and physics weight λ on validation profiles only |
-| Benchmark E1 | `e1` | 6, 7 | All methods on all test cases; profile-level bootstrap CIs; paired Wilcoxon tests with Holm correction |
-| Calibration | `calibrate` | 7 (button) | Split-conformal rescaling of predictive intervals, fitted on validation profiles |
-| E2, E3, E4 | `e2`, `e3`, `e4` | 8 | Noise robustness, physics-weight sensitivity, Mars-year hold-out |
-| Report | `report` | 9 | Figures (PNG/PDF), CSV and LaTeX tables, auto-generated results summary |
+| Experiment | Question |
+|---|---|
+| **E1** Main benchmark | Accuracy and physical consistency of all methods across gap sizes and locations |
+| **E2** Noise robustness | Sensitivity to added retrieval noise (0, 2σ, 5σ) on the observed levels |
+| **E3** Physics-weight sweep | Effect of λ ∈ {0, 0.01, …, 100} |
+| **E4** Mars-year hold-out | Transfer to an unseen observing campaign |
 
-### Methods compared
+Statistics: profile-level bootstrap CIs (5000 resamples), paired Wilcoxon signed-rank tests with Holm correction,
+split-conformal calibration of predictive intervals on validation profiles.
 
-| Method | Uses other profiles | Uses physics | Uncertainty |
-|---|---|---|---|
-| Linear / PCHIP interpolation | no | no | no |
-| Hydrostatic integration (PCHIP T, exact ln P) | no | yes (exact) | no |
-| Gaussian process | no | no | yes |
-| EOF optimal interpolation | yes | no | yes |
-| Random forest (Python only) | yes | no | no |
-| MLP / PINN zero-shot | yes | PINN | ensemble |
-| MLP / PINN fine-tuned (plain, Python) | yes | PINN | ensemble |
-| **MLP / PINN regularised fine-tuning (L2-SP)** | yes | PINN | ensemble |
+## Repository structure
 
----
-## Architecture: how data flows through the pipeline 
-<img src="docs/img/architecture-flow.svg" alt="Animated diagram of data flowing through the Mars PINN gap-filling pipeline" width="100%">
+```
+Mars-atmosphere/
+├── src/marspinn/            Python package (config, physics, data, baselines, nn, benchmark, metrics, plots, pipeline, CLI)
+├── configs/                 YAML experiment configs: quick, demo, synthetic_full, paper
+├── notebooks/
+│   ├── 01_mro_rss_pinn_reconstruction.ipynb                  self-contained experiment notebook (clean)
+│   └── 02_mro_rss_pinn_reconstruction_executed_kaggle.ipynb  executed record of the reported run
+├── data/
+│   ├── processed/           MRO RSS profiles used in the study (levels + per-profile metadata)
+│   └── profile_ids.txt      the 185 profile identifiers
+├── results/                 reported results: figures/, tables/, results_summary.md
+├── paper/figures/           figures prepared for the manuscript
+├── docs/                    interactive browser simulator (GitHub Pages)
+├── scripts/                 dataset builder and convenience scripts
+├── tests/                   pytest suite and JavaScript engine tests
+├── CITATION.cff
+└── pyproject.toml
+```
 
-## 1. Interactive simulator
+## Installation
 
-**Run locally:** `scripts/serve_simulator.sh` then open <http://localhost:8000>, or simply double-click
-`docs/index.html`.
-
-**Publish on GitHub Pages:** after pushing, go to *Settings → Pages → Source: GitHub Actions*. The workflow
-`.github/workflows/pages.yml` deploys `docs/` on every push to `main`. The site appears at
-[`https://<user>.github.io/<repo>/`](https://shailendradabral.github.io/Mars-atmosphere/).
-
-What you can control:
-
-- **Data:** number of profiles per Mars year, random seed, retrieval-noise level, or upload the real CSV.
-- **Quality control:** σ_T threshold and minimum profile length.
-- **Splits:** train / validation / test fractions and seed.
-- **Gaps:** test profile, gap size (1–25 km), location, minimum observed extent.
-- **Networks:** width, depth, ensemble size, training steps, learning rate, batch size, physics weight λ.
-- **Reconstruction:** which methods, L2-SP strength α for each family, fine-tuning λ, steps, learning rate, added noise.
-- **Benchmark:** gap sizes, locations, number of test profiles, methods; tuning on validation; conformal calibration.
-- **Experiments:** noise multipliers (E2), λ values (E3), profiles per held-out year (E4).
-- **Export:** a YAML config for the Python pipeline, benchmark tables (CSV), all results (JSON), the dataset (CSV).
-
-Everything runs in the browser (plain JavaScript, no server, no external libraries). The neural networks use
-hand-written forward-mode derivatives for d ln P / dZ and reverse-mode gradients, verified against finite
-differences in `tests/test_sim_core.mjs`. Default settings are smaller than the paper's so that a full run takes
-about one to three minutes; *Run full workflow* chains steps 1–7 with the current settings.
-
-![Reconstruction panel](docs/img/reconstruct.png)
-
----
-
-## 2. Python pipeline
-
-### Install
+Requires Python ≥ 3.9.
 
 ```bash
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # or the CUDA build for a GPU
+git clone https://github.com/ShailendraDabral/Mars-atmosphere.git
+cd Mars-atmosphere
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # or a CUDA build
 pip install -e ".[dev]"
 ```
 
-### Run
+## Reproducing the results
+
+The reported results were produced by
+[`notebooks/02_mro_rss_pinn_reconstruction_executed_kaggle.ipynb`](notebooks/02_mro_rss_pinn_reconstruction_executed_kaggle.ipynb)
+(Kaggle GPU, 394.7 min). The same protocol is available as a package and command-line tool:
 
 ```bash
-marspinn steps                                   # list steps and their dependencies
-marspinn run --config configs/quick.yaml         # whole workflow, synthetic data, ~3 min on a CPU
-marspinn run --config configs/demo.yaml          # all experiments, medium size
-marspinn run --config configs/paper.yaml         # paper protocol on the real data (GPU recommended, ~6-7 h)
+marspinn run --config configs/paper.yaml          # full protocol on the real data (GPU recommended, ~6–7 h)
+marspinn run --config configs/quick.yaml          # smoke test on synthetic data (~3 min on a CPU)
+marspinn run --config configs/demo.yaml           # all experiments, medium size, synthetic data
+```
 
-# control individual steps and settings
-marspinn run --config configs/quick.yaml --steps e1 report
+Run selected steps or override settings:
+
+```bash
+marspinn steps                                                     # list steps and dependencies
+marspinn run --config configs/paper.yaml --steps e1 report
 marspinn run --config configs/quick.yaml --set GAP_SIZES_KM=[10,20] LAMBDA_PHYS=10 SEEDS=[0,1,2]
-marspinn run --csv data/mro_tps_combined.csv --quick
-
-# utilities
-marspinn synth --out data/synthetic_tps.csv      # write a synthetic archive in the MRO CSV format
-marspinn audit --csv data/mro_tps_combined.csv   # quality control + physics audit only
+marspinn audit --csv data/processed/mro_tps_combined.csv          # quality control + physics audit only
+marspinn synth --out data/synthetic_tps.csv                       # synthetic archive in the MRO format
 ```
 
 From Python:
 
 ```python
 from marspinn import load_config, Pipeline
-cfg = load_config("configs/quick.yaml", ["SEEDS=[0,1,2]"])
+
+cfg = load_config("configs/paper.yaml", ["SEEDS=[0,1,2]"])
 results = Pipeline(cfg).run(["data", "split", "pretrain", "tune", "e1", "report"])
 print(results["S_OVERALL"])
 ```
 
-Results are cached per case and per checkpoint in `OUTPUT_DIR`, so an interrupted run resumes where it stopped.
-Delete the output folder (or change `OUTPUT_DIR`) after changing data or model settings.
-
-### Outputs
+Each run writes to `OUTPUT_DIR`:
 
 ```
 results/<name>/
-  run_config.yaml            the exact settings used
-  data_audit.json            QC and physics audit
-  splits.json                profile IDs per group
-  selected_hyperparameters.json
-  figures/                   fig01 … fig10 (PNG + PDF)
-  tables/                    summary_*.csv, significance_*.csv, uncertainty_summary.csv, table1_main_results.tex
-  results_summary.md         auto-generated text; claims only what the tests support
-  checkpoints/, raw/         cached networks, training histories, pointwise predictions
+├── run_config.yaml                 exact settings used
+├── data_audit.json                 QC and physics audit
+├── splits.json                     profile IDs per split
+├── selected_hyperparameters.json
+├── figures/                        fig01 … fig10 (PNG + PDF)
+├── tables/                         summary_*.csv, significance_*.csv, uncertainty_summary.csv, LaTeX tables
+├── results_summary.md              auto-generated; claims only what the tests support
+└── checkpoints/, raw/              cached networks and pointwise predictions (runs resume from here)
 ```
 
-![Example reconstruction from the Python pipeline](docs/img/python_example.png)
+## Interactive simulator
 
-### Configuration reference (main keys)
+[**shailendradabral.github.io/Mars-atmosphere**](https://shailendradabral.github.io/Mars-atmosphere/) runs the
+complete workflow in the browser — data generation or CSV upload, QC, splits, gaps, network training,
+reconstruction, benchmark, statistics, calibration and the E2–E4 experiments — in plain JavaScript with no server
+and no dependencies. Default settings are smaller than the paper's so a full run takes one to three minutes; any
+setting can be exported as a YAML config for the Python pipeline.
+
+<p align="center">
+  <img src="docs/img/benchmark.png" width="80%" alt="Benchmark panel of the interactive simulator">
+</p>
+
+Run it locally with `scripts/serve_simulator.sh` (then open <http://localhost:8000>) or open `docs/index.html`
+directly. See [`docs/README.md`](docs/README.md).
+
+## Data
+
+The study uses the MRO Radio Science temperature–pressure profiles, **`MRO-M-RSS-5-TPS-V1.0`** (D. P. Hinson,
+NASA Planetary Data System, Atmospheres Node). The processed tables used in the paper — 185 pre-dawn ingress
+profiles from Mars years 29–31 — are included in [`data/processed/`](data/processed/); see
+[`data/README.md`](data/README.md) for provenance, column definitions and how to rebuild them from the PDS
+products with [`scripts/build_mro_dataset.py`](scripts/build_mro_dataset.py).
+
+The pipeline also includes a physically consistent **synthetic** generator (`marspinn.synthetic`) with the same
+columns and coverage, used for tests, the simulator and quick experiments. Synthetic results are for development
+only; quote results on the real data.
+
+## Configuration
+
+All settings live in one flat dictionary; defaults (`src/marspinn/config.py`) reproduce the paper protocol, and
+YAML files or `--set KEY=VALUE` override individual entries.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `DATA_SOURCE` | `synthetic` | `synthetic` or `csv` |
-| `SYNTH_PROFILES_PER_YEAR` | `[65, 46, 73]` | synthetic profiles in MY 29, 30, 31 |
+| `DATA_LEVELS` | `data/processed/mro_tps_combined.csv` | input CSV when `DATA_SOURCE: csv` |
 | `SIGMA_T_MAX`, `MIN_LEVELS` | `5.0`, `40` | quality control |
 | `SPLIT_FRACS`, `SPLIT_SEED` | `[0.7, 0.15, 0.15]`, `2024` | profile-level split |
-| `GAP_SIZES_KM`, `GAP_LOCATIONS` | `[2,5,10,20]`, all three | gap scenarios |
-| `SEEDS` | `[0..4]` | ensemble members |
+| `GAP_SIZES_KM`, `GAP_LOCATIONS` | `[2, 5, 10, 20]`, all three | gap scenarios |
+| `SEEDS` | `[0, 1, 2, 3, 4]` | ensemble members |
 | `HIDDEN`, `DEPTH` | `64`, `4` | network size |
 | `PRETRAIN_EPOCHS`, `PRETRAIN_LR` | `3000`, `2e-3` | pre-training |
 | `LAMBDA_PHYS` | `1.0` | physics weight in pre-training and plain fine-tuning |
 | `FINETUNE_STEPS`, `FINETUNE_LR` | `400`, `5e-4` | per-profile fine-tuning |
 | `TUNE_ALPHAS`, `TUNE_LAMBDAS`, `TUNE_ES` | grids | validation search for regularised fine-tuning |
-| `HP_OVERRIDE` | `null` | fix α, λ, early stopping and skip tuning |
 | `RUN_NOISE`, `RUN_LAMBDA_SWEEP`, `RUN_YEAR_HOLDOUT` | `true` | enable E2, E3, E4 |
 | `N_BOOT`, `ALPHA` | `5000`, `0.05` | statistics |
 | `DEVICE` | `auto` | `cpu`, `cuda` or `auto` |
 
-All keys and defaults are in `src/marspinn/config.py`.
-
----
-
-## The physics in three equations
-
-Vertical coordinate: geopotential height *Z* = Φ / g₀ (g₀ = 3.71 m s⁻²), in which hydrostatic balance is exact.
-
-1. Ideal-gas law (built into the network): *n* = *P* / (k_B *T*)
-2. Hydrostatic balance: d ln *P* / d*Z* = −m g₀ / (k_B *T*) = −1 / *H*(*T*)
-3. Dimensionless residual used as the physics loss: *r* = *H*_ref · d ln *P* / d*Z* + *T*_ref / *T*, with *T*_ref = 200 K and *H*_ref ≈ 10.3 km
-
-Training loss = uncertainty-weighted data misfit + λ · mean(*r*²) at collocation points
-(+ α · ‖θ − θ_pre-trained‖² during regularised fine-tuning).
-
----
-
-## About the synthetic data
-
-`marspinn.synthetic` (Python) and `generateDataset` (JavaScript) build profiles with a pre-dawn near-surface
-inversion, a tropospheric lapse rate, a colder middle atmosphere and vertically propagating waves, with parameters
-that depend on latitude, season and Mars year. Coverage mirrors the archive (MY 29: low latitudes, late northern
-summer; MY 30 and 31: high northern latitudes, spring). A vertically correlated retrieval error grows toward the top,
-and pressure is integrated hydrostatically from the *retrieved* temperature, so the reference is physically
-consistent exactly as in the real retrieval. The physics audit recovers 43.49 g/mol and a hydrostatic floor of about
-0.0016, matching the real data. Synthetic results are for learning and testing the workflow; quote results on the
-real data in publications.
-
----
-
-## Repository layout
-
-```
-docs/                 interactive simulator (index.html, sim-core.js) — served by GitHub Pages
-src/marspinn/         Python package: config, physics, synthetic, data, baselines, nn, benchmark, metrics, plots, pipeline, cli
-configs/              quick, demo, synthetic_full, paper
-tests/                pytest suite (Python) and test_sim_core.mjs (JavaScript)
-notebooks/            original research notebook with outputs
-paper/                LaTeX manuscript, figures and compiled PDF
-data/                 put mro_tps_combined.csv here (see data/README.md)
-scripts/              run_quick.sh, serve_simulator.sh, push_to_github.sh
-.github/workflows/    tests on every push; Pages deployment of docs/
-```
-
-## Tests
+## Testing
 
 ```bash
-pytest -q                          # Python: physics, baselines, gradients, statistics, tiny end-to-end run
-node tests/test_sim_core.mjs       # JavaScript engine: physics audit, gradient check, short training
+pytest -q                        # physics, baselines, gradients, statistics, tiny end-to-end run
+node tests/test_sim_core.mjs     # simulator engine: physics audit, gradient check, short training
 ```
 
-## Uploading to GitHub
-
-```bash
-# create an empty repository on github.com first (no README), then:
-scripts/push_to_github.sh https://github.com/<user>/mars-pinn-gapfill.git
-```
-
-Or with the GitHub CLI: `gh repo create mars-pinn-gapfill --public --source . --push`.
+Both suites run on every push via GitHub Actions.
 
 ## Limitations
 
-The real data cover pre-dawn ingress occultations in northern spring and summer (L_s ≈ 21°–142°) between about
-13° S and 69° N. The reference is a retrieval that itself uses hydrostatic balance and the ideal-gas law, so
-physical-consistency results measure agreement with the retrieval physics. Gaps are synthetic. Physics constrains
-pressure given temperature, not temperature itself. See the paper (`paper/manuscript.pdf`) for the full discussion.
+- **Scope.** All profiles are pre-dawn (≈ 03–05 LTST) ingress occultations in northern spring and summer
+  (*L*ₛ ≈ 21°–142°), between about 13° S and 69° N.
+- **Reference is a retrieval.** The reference profiles were themselves derived with hydrostatic balance and the
+  ideal-gas law, so physical-consistency metrics measure agreement with the retrieval physics.
+- **Physics constrains P given T, not T.** Temperature inside a gap comes from the learned cross-profile prior.
+- **Synthetic gaps.** Gaps are imposed on complete profiles; real data loss may be structured differently.
+- **Trimmed top.** Levels with σ_T > 5 K (upper-boundary initialisation zone) are excluded.
+- **Confounded campaigns.** Mars year, season and latitude change together between campaigns, so E4 cannot
+  separate interannual, seasonal and latitudinal transfer.
 
 ## Citation
 
-See `CITATION.cff`. Data: Hinson, D. P., MRO Radio Science temperature–pressure profiles, `MRO-M-RSS-5-TPS-V1.0`,
-NASA Planetary Data System.
+If you use this code or results, please cite the software (see [`CITATION.cff`](CITATION.cff)) and the data:
+
+```bibtex
+@software{dabral_mars_pinn_2026,
+  author  = {Dabral, Shailendra and Agrawal, Keshav and Banerjee, Soumyaneal},
+  title   = {Physics-informed reconstruction of missing intervals in Martian radio-occultation profiles},
+  year    = {2026},
+  version = {1.0.0},
+  url     = {https://github.com/ShailendraDabral/Mars-atmosphere},
+  license = {MIT}
+}
+
+@misc{hinson_mro_rss_tps,
+  author       = {Hinson, D. P.},
+  title        = {{MRO} Radio Science Temperature--Pressure Profiles, {MRO-M-RSS-5-TPS-V1.0}},
+  howpublished = {NASA Planetary Data System, Atmospheres Node}
+}
+```
+
+## License and acknowledgements
+
+Code is released under the [MIT License](LICENSE). The MRO Radio Science data are provided by NASA's Planetary
+Data System; we thank D. P. Hinson and the MRO Radio Science team for producing and archiving the retrievals.
