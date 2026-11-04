@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from .baselines import eof_predict, gp_predict, hydrostatic_integration, interp_extrap
+from .config import config_hash
 from .data import IN_COLS, make_gap
 
 NAMES = dict(lin="Linear", pchip="PCHIP", hydro="Hydrostatic int.", gp="Gaussian process",
@@ -100,10 +101,10 @@ class Runner:
         return pd.concat(rows, ignore_index=True)
 
     # ------------------------------------------------------------------ many cases
-    def run_benchmark(self, cases, df, base, rf, cache_name, progress=None, **kw):
+    def run_benchmark(self, cases, df, base, rf, cache_name, **kw):
         """Run cases (pid, size, location[, extra-kwargs]); results are cached per case so an
         interrupted run resumes where it stopped."""
-        cache = self.cache_dir / f"{cache_name}.pkl"
+        cache = self.cache_dir / f"{cache_name}_{config_hash(self.cfg)}.pkl"
         done = pd.read_pickle(cache) if cache.exists() else pd.DataFrame()
         done_keys = set(done["case_id"].unique()) if len(done) else set()
         parts, t0 = [done], time.time()
@@ -128,6 +129,4 @@ class Runner:
                 if self.verbose:
                     el = time.time() - t0
                     print(f"    {i + 1}/{len(todo)} cases  {el:.0f}s  (~{el / (i + 1) * (len(todo) - i - 1):.0f}s left)")
-            if progress:
-                progress(i + 1, len(todo))
         return pd.concat(parts, ignore_index=True)

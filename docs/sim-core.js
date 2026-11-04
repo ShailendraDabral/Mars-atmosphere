@@ -166,7 +166,7 @@
 
   function correlatedNoise(rng, z, corr) {
     const n = z.length, C = new Float64Array(n * n);
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) C[i * n + j] = Math.exp(-0.5 * ((z[i] - z[j]) / corr) ** 2) + (i === j ? 1e-6 : 0);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) C[i * n + j] = Math.exp(-0.5 * ((z[i] - z[j]) / corr) ** 2) + (i === j ? 1e-8 : 0);
     const L = cholesky(C, n), e = Array.from({ length: n }, () => rng.normal());
     return Array.from({ length: n }, (_, i) => { let s = 0; for (let k = 0; k <= i; k++) s += L[i * n + k] * e[k]; return s; });
   }
@@ -214,16 +214,18 @@
   }
 
   // ------------------------------------------------------------------ real CSV
+  // split one CSV line, keeping commas that sit inside double quotes
+  const splitCSV = (l) => (l.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || []).slice(0, -1).map((f) => f.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"'));
   function parseCSV(text) {
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
-    const head = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+    const head = splitCSV(lines[0]).map((h) => h.trim().replace(/^"|"$/g, ""));
     const need = ["Profile_ID", "Mars_Year", "Solar_Long", "Radius", "Latitude", "Longitude", "Geopotential", "Pressure", "Sigma_P", "Temperature", "Sigma_T", "Number_Density"];
     const miss = need.filter((c) => !head.includes(c));
     if (miss.length) throw new Error("The CSV is missing these columns: " + miss.join(", "));
     const col = Object.fromEntries(head.map((h, i) => [h, i]));
     const groups = new Map();
     for (let r = 1; r < lines.length; r++) {
-      const c = lines[r].split(",");
+      const c = splitCSV(lines[r]);
       const id = c[col.Profile_ID].replace(/^"|"$/g, "");
       if (!groups.has(id)) groups.set(id, []);
       groups.get(id).push(c);
@@ -785,13 +787,13 @@
     o.forEach((idx, k) => { run = Math.max(run, Math.min(1, (out.length - k) * out[idx].p_wilcoxon)); out[idx].p_holm = run; out[idx].significant = run < alpha; });
     return out;
   }
-  // split conformal: per (method, location, var) the ceil((n+1)q)/n quantile of normalised scores
+  // split conformal: per (method, location, var) the ceil((n+1)q)-th smallest normalised score
   function fitConformal(rows) {
     const Q = {}, groups = new Map();
     for (const r of rows) { if (!r.scoresT) continue; const k = r.method + "|" + r.location; if (!groups.has(k)) groups.set(k, { T: [], P: [] }); groups.get(k).T.push(...r.scoresT); groups.get(k).P.push(...r.scoresP); }
     for (const [k, g] of groups) for (const v of ["T", "P"]) {
       const s = g[v].slice().sort((a, b) => a - b), n = s.length;
-      for (const q of COV) { const lvl = Math.min(1, Math.ceil((n + 1) * q) / n); Q[`${k}|${v}|${q}`] = quantile(s, lvl); }
+      for (const q of COV) Q[`${k}|${v}|${q}`] = s[Math.min(n, Math.ceil((n + 1) * q)) - 1];
     }
     return Q;
   }

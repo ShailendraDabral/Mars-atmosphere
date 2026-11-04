@@ -100,6 +100,18 @@ def load_config(path: str | Path | None = None, overrides: list[str] | None = No
     return cfg
 
 
+# keys that change only where results are written or how they are summarised
+_NO_HASH = {"OUTPUT_DIR", "N_BOOT", "ALPHA", "DEVICE"}
+
+
+def config_hash(cfg: dict) -> str:
+    """Short fingerprint of every setting that can change a trained model or a benchmark row,
+    so that cached checkpoints and case results are never reused after the configuration changes."""
+    import hashlib, json
+    keep = {k: v for k, v in sorted(cfg.items()) if k not in _NO_HASH}
+    return hashlib.sha1(json.dumps(keep, sort_keys=True, default=str).encode()).hexdigest()[:8]
+
+
 def save_config(cfg: dict, path: str | Path) -> None:
     def plain(v):
         if isinstance(v, tuple):
