@@ -5,7 +5,7 @@ A browser version of the full workflow, published at
 
 | File | Content |
 |---|---|
-| `index.html` | User interface: one panel per workflow step (data, QC, splits, gaps, training, reconstruction, benchmark, experiments, export) |
+| `index.html` | User interface: an overview with the reported real-data results, the *Gap challenge* (draw your own reconstruction and compete against the methods), and one panel per workflow step (data, QC, splits, gaps, training, reconstruction, benchmark, experiments, export) |
 | `sim-core.js` | Computational engine: synthetic data, physics audit, baselines, MLP/PINN with hand-written derivatives, statistics |
 | `img/` | Screenshots and the architecture diagram used in the main README |
 

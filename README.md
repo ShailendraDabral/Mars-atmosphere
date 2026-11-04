@@ -233,7 +233,9 @@ results/<name>/
 complete workflow in the browser — data generation or CSV upload, QC, splits, gaps, network training,
 reconstruction, benchmark, statistics, calibration and the E2–E4 experiments — in plain JavaScript with no server
 and no dependencies. Default settings are smaller than the paper's so a full run takes one to three minutes; any
-setting can be exported as a YAML config for the Python pipeline.
+setting can be exported as a YAML config for the Python pipeline. It opens on an overview of the reported results
+and includes a **Gap challenge**: draw your own guess across a hidden interval and see how it ranks against the
+reconstruction methods.
 
 <p align="center">
   <img src="docs/img/benchmark.png" width="80%" alt="Benchmark panel of the interactive simulator">
