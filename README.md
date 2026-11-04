@@ -2,7 +2,7 @@
 
 # Physics-Informed Reconstruction of Missing Intervals in Martian Radio-Occultation Profiles
 
-**Shailendra Dabral · Keshav Agrawal · Soumyaneal Banerjee**
+**Shailendra Dabral · Keshav Aggarwal · Soumyaneal Banerjee**
 
 [![Tests](https://github.com/ShailendraDabral/Mars-atmosphere/actions/workflows/tests.yml/badge.svg)](https://github.com/ShailendraDabral/Mars-atmosphere/actions/workflows/tests.yml)
 [![Simulator](https://img.shields.io/badge/interactive%20simulator-live-5b63f0)](https://shailendradabral.github.io/Mars-atmosphere/)
@@ -303,7 +303,7 @@ If you use this code or results, please cite the software (see [`CITATION.cff`](
 
 ```bibtex
 @software{dabral_mars_pinn_2026,
-  author  = {Dabral, Shailendra and Agrawal, Keshav and Banerjee, Soumyaneal},
+  author  = {Dabral, Shailendra and Aggarwal, Keshav and Banerjee, Soumyaneal},
   title   = {Physics-informed reconstruction of missing intervals in Martian radio-occultation profiles},
   year    = {2026},
   version = {1.0.0},

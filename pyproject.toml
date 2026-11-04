@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Physics-informed reconstruction of missing intervals in Martian radio-occultation profiles"
 readme = "README.md"
 license = {text = "MIT"}
-authors = [{name = "Shailendra Dabral"}, {name = "Keshav Agrawal"}, {name = "Soumyaneal Banerjee"}]
+authors = [{name = "Shailendra Dabral"}, {name = "Keshav Aggarwal"}, {name = "Soumyaneal Banerjee"}]
 keywords = ["mars", "atmosphere", "radio-occultation", "physics-informed-neural-networks", "gap-filling"]
 classifiers = [
     "Development Status :: 4 - Beta",
