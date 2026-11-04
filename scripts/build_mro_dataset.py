@@ -6,37 +6,20 @@ The format of every file is detected automatically, and both missions are writte
 with a "mission" column. Geopotential is re-referenced to a common constant (GEOPOT_REF_COMMON) because
 the two missions used different reference values.
 
-HOW TO USE
-  1. Put the path of each month folder in MONTH_FOLDERS below.
-  2. Set OUTPUT_DIR.
-  3. Run:  python scripts/mro_tps_loader.py
-     (or in a notebook:  %run scripts/mro_tps_loader.py)
+This script rebuilds ``data/processed/`` from the raw PDS products.
+
+Usage
+-----
+    python scripts/build_mro_dataset.py <month_folder> [<month_folder> ...] --out data/processed
 
 Each folder is searched (including its sub-folders) for .TPS / .tps files. Folders can hold MRO data,
-MGS data, or both.
-All profiles are combined and written to OUTPUT_DIR:
-  - mro_tps_combined.csv : FINAL FILE. One row per vertical level, all months,
+MGS data, or both. All profiles are combined and written to the output directory:
+  - mro_tps_combined.csv : one row per vertical level, all months,
                            with the profile metadata attached to every row.
   - mro_tps_profiles.csv : one row per profile (metadata + quality/physics checks).
 
-You can also pass folders on the command line instead of editing the list:
-  python scripts/mro_tps_loader.py /path/month1 /path/month2 --out ./processed
+The functions can also be imported, e.g. ``load_tps_folders([...])`` from a notebook.
 """
-
-# ============================ EDIT THESE ============================
-# Rules: start every path with r"..." and end every line with a comma.
-MONTH_FOLDERS = [
-    r"Y:\project-mars\atmos-data\201206",   # <- check this name (was "20120")
-    r"Y:\project-mars\atmos-data\200809",
-    r"Y:\project-mars\atmos-data\200810",
-    r"Y:\project-mars\atmos-data\200912",
-    r"Y:\project-mars\atmos-data\201001",
-    r"Y:\project-mars\atmos-data\201112",
-    r"Y:\project-mars\atmos-data\201201",
-    r"Y:\project-mars\atmos-data\201202",
-]
-OUTPUT_DIR = r"Y:\project-mars\atmos-data\new"
-# ====================================================================
 
 import argparse
 import csv
@@ -209,11 +192,11 @@ def load_tps_folders(folders):
         folder_str = str(folder)
         if any(ord(ch) < 32 or 127 <= ord(ch) < 160 for ch in folder_str):
             print(f"  [BAD PATH] {folder_str!r}  -> contains hidden characters; "
-                  f'put r in front of the quotes, like r"Y:\\...", skipped')
+                  f'use a raw string such as r"C:\\...", skipped')
             continue
         if folder_str.count(":\\") > 1 or folder_str.count(":/") > 1:
             print(f"  [BAD PATH] {folder_str}  -> looks like two paths joined; "
-                  f"check for a missing comma in MONTH_FOLDERS, skipped")
+                  f"check for a missing comma in the folder list, skipped")
             continue
         folder = Path(folder)
         if not folder.is_dir():
@@ -258,7 +241,7 @@ def load_tps_folders(folders):
         for f, e in failures[:20]:
             print(f"  {f}: {e}")
     if not level_frames:
-        raise FileNotFoundError("no TPS files were loaded; check the paths in MONTH_FOLDERS")
+        raise FileNotFoundError("no TPS files were loaded; check the folder paths")
 
     levels = pd.concat(level_frames, ignore_index=True)
     profiles = pd.DataFrame(profile_rows)
@@ -304,19 +287,11 @@ def summarize(levels, profiles):
 
 
 if __name__ == "__main__":
-    import sys
-    # Inside Jupyter, sys.argv holds the kernel's own arguments (e.g. "-f kernel-xxx.json"),
-    # not user folders, so command-line parsing is skipped there and MONTH_FOLDERS is used.
-    in_notebook = "ipykernel" in sys.modules
-    if in_notebook:
-        folders, out = MONTH_FOLDERS, Path(OUTPUT_DIR)
-    else:
-        ap = argparse.ArgumentParser()
-        ap.add_argument("folders", nargs="*", help="month folders (optional; overrides MONTH_FOLDERS)")
-        ap.add_argument("--out", default=None, help="output directory (optional; overrides OUTPUT_DIR)")
-        args = ap.parse_args()
-        folders = args.folders or MONTH_FOLDERS
-        out = Path(args.out or OUTPUT_DIR)
+    ap = argparse.ArgumentParser(description="Combine PDS RSS TPS files into the CSV tables used by marspinn.")
+    ap.add_argument("folders", nargs="+", help="folders containing .TPS files (searched recursively)")
+    ap.add_argument("--out", default="data/processed", help="output directory (default: data/processed)")
+    args = ap.parse_args()
+    folders, out = args.folders, Path(args.out)
 
     levels, profiles = load_tps_folders(folders)
     print()
