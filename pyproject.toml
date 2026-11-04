@@ -8,13 +8,28 @@ version = "1.0.0"
 description = "Physics-informed reconstruction of missing intervals in Martian radio-occultation profiles"
 readme = "README.md"
 license = {text = "MIT"}
-authors = [{name = "Shailendra Dabral"}, {name = "Keshav Agrawal"}]
+authors = [{name = "Shailendra Dabral"}, {name = "Keshav Aggarwal"}, {name = "Soumyaneal Banerjee"}]
+keywords = ["mars", "atmosphere", "radio-occultation", "physics-informed-neural-networks", "gap-filling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
 requires-python = ">=3.9"
 dependencies = ["numpy>=1.23", "pandas>=1.5", "scipy>=1.9", "scikit-learn>=1.1", "matplotlib>=3.6",
                 "torch>=2.0", "pyyaml>=6.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+notebooks = ["jupyter"]
+
+[project.urls]
+Homepage = "https://github.com/ShailendraDabral/Mars-atmosphere"
+Simulator = "https://shailendradabral.github.io/Mars-atmosphere/"
+Issues = "https://github.com/ShailendraDabral/Mars-atmosphere/issues"
 
 [project.scripts]
 marspinn = "marspinn.cli:main"
