@@ -9,17 +9,16 @@ from .benchmark import OURS
 from .physics import hydro_residual_np
 
 COV_LEVELS = [0.5, 0.8, 0.9, 0.95]
-POINT_METRICS = ["T_MAE", "T_RMSE", "T_bias", "T_within_2sig", "P_relMAE", "n_relMAE", "Hydro_RMS"]
+POINT_METRICS = ["T_MAE", "T_RMSE", "T_bias", "T_within_2sig", "P_relMAE", "Hydro_RMS"]
 
 
 def case_metrics(g, phys):
     g = g.sort_values("Z_km")
     eT = g["T_pred"].values - g["T_ref"].values
     elnP = g["lnP_pred"].values - g["lnP_ref"].values
-    n_ratio = np.exp(elnP) * g["T_ref"].values / g["T_pred"].values
     d = dict(T_MAE=np.mean(np.abs(eT)), T_RMSE=np.sqrt(np.mean(eT ** 2)), T_bias=np.mean(eT),
              T_within_2sig=np.mean(np.abs(eT) <= 2 * g["sig_T"].values),
-             P_relMAE=100 * np.mean(np.abs(np.exp(elnP) - 1)), n_relMAE=100 * np.mean(np.abs(n_ratio - 1)),
+             P_relMAE=100 * np.mean(np.abs(np.exp(elnP) - 1)),
              Hydro_RMS=np.sqrt(np.mean(hydro_residual_np(g["Z_km"].values, g["T_pred"].values,
                                                          g["lnP_pred"].values, phys) ** 2)) if len(g) >= 3 else np.nan)
     if g["T_std"].notna().all():
@@ -115,28 +114,41 @@ def _scores(g):
     return (np.abs(g.T_pred - g.T_ref) / sT).values, (np.abs(g.lnP_pred - g.lnP_ref) / sP).values
 
 
+def _case_quantile(r, w, n, q):
+    """Weighted conformal quantile: every case carries equal weight and the
+    finite-sample correction uses the number of cases n, not of levels."""
+    o = np.argsort(r)
+    cw = np.cumsum(w[o]) / w.sum()
+    return r[o][min(len(r) - 1, np.searchsorted(cw, min(1.0, np.ceil((n + 1) * q) / n) - 1e-12))]
+
+
 def fit_conformal(pw_cal):
-    """Mondrian (per gap location) split-conformal quantiles of normalised scores."""
+    """Mondrian split-conformal quantiles of normalised scores, per (method, location)
+    and per (method, location, gap size); levels of one case share that case's weight."""
     Q = {}
-    for (m, loc), g in pw_cal[pw_cal.T_std.notna()].groupby(["method", "location"]):
+    g0 = pw_cal[pw_cal.T_std.notna()].copy()
+    g0["_w"] = 1.0 / g0.groupby(["case_id", "method"])["Z_km"].transform("size")
+    for keys, g in list(g0.groupby(["method", "location"])) + list(g0.groupby(["method", "location", "gap_km"])):
+        n, w = g.case_id.nunique(), g["_w"].values
         for var, r in zip(("T", "P"), _scores(g)):
-            n = len(r)
             for q in QGRID:
-                Q[(m, loc, var, float(q))] = np.quantile(r, min(1.0, np.ceil((n + 1) * q) / n))
+                Q[(*keys, var, float(q))] = _case_quantile(r, w, n, q)
     return Q
 
 
 def conformal_coverage(pw, Q):
     rows = []
     methods = set(k[0] for k in Q)
-    for (cid, pid, loc, m), g in pw[pw.method.isin(methods)].groupby(["case_id", "Profile_ID", "location", "method"]):
-        if g.T_std.isna().any() or (m, loc, "T", 0.95) not in Q:
+    for (cid, pid, loc, gap, m), g in pw[pw.method.isin(methods)].groupby(["case_id", "Profile_ID", "location", "gap_km", "method"]):
+        # use the gap-size cell when the calibration set has it, else the location cell
+        key = (m, loc, gap) if (m, loc, gap, "T", 0.95) in Q else (m, loc)
+        if g.T_std.isna().any() or (*key, "T", 0.95) not in Q:
             continue
         rT, rP = _scores(g)
-        d = dict(case_id=cid, Profile_ID=pid, location=loc, method=m)
+        d = dict(case_id=cid, Profile_ID=pid, location=loc, gap_km=gap, method=m)
         for q in COV_LEVELS:
-            d[f"T_ccov{int(q * 100)}"] = np.mean(rT <= Q[(m, loc, "T", q)])
-            d[f"P_ccov{int(q * 100)}"] = np.mean(rP <= Q[(m, loc, "P", q)])
+            d[f"T_ccov{int(q * 100)}"] = np.mean(rT <= Q[(*key, "T", q)])
+            d[f"P_ccov{int(q * 100)}"] = np.mean(rP <= Q[(*key, "P", q)])
         rows.append(d)
     return pd.DataFrame(rows)
 

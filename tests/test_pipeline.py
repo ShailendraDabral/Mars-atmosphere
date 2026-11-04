@@ -41,9 +41,15 @@ def test_quality_control_trims_top(data):
 
 def test_split_has_no_leakage(data):
     _, _, _, meta, _, _ = data
-    tr, va, te = stratified_profile_split(meta, (0.7, 0.15, 0.15), 1)
+    tr, va, te, n_drop = stratified_profile_split(meta, (0.7, 0.15, 0.15), 1)
     assert not (set(tr) & set(va) or set(tr) & set(te) or set(va) & set(te))
-    assert len(tr) + len(va) + len(te) == len(meta)
+    assert len(tr) + len(va) + len(te) + n_drop == len(meta)
+    # no train profile sits next to a test profile of the same year
+    for a in tr:
+        for b in te:
+            if meta.at[a, "Mars_Year"] == meta.at[b, "Mars_Year"]:
+                dls = abs((meta.at[a, "Solar_Long"] - meta.at[b, "Solar_Long"] + 180) % 360 - 180)
+                assert dls >= 1.0 or abs(meta.at[a, "lat"] - meta.at[b, "lat"]) >= 5.0
 
 
 def test_gap_definitions():

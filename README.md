@@ -26,9 +26,12 @@ a neural network that is also penalised whenever its output breaks **hydrostatic
 supports the weight of the air above). The **ideal-gas law** (pressure = density × Boltzmann constant × temperature)
 is built in exactly.
 
-The main finding: the physics makes **pressure and density** reconstructions far more accurate and self-consistent
-than an identical network without physics, but it does not by itself tell you the **temperature** — for that, the
-statistical knowledge learned from many profiles matters most.
+The main finding: the physics keeps the reconstructed **pressure** hydrostatically consistent with the reconstructed
+temperature, but it does not by itself tell you the **temperature** — for that, the statistical knowledge learned
+from many profiles matters most. Because the MRO retrieval itself derives pressure by hydrostatic integration, the
+fair pressure baseline is hydrostatic integration of the observed temperature, and the summary reports the PINN
+against it. Density follows from temperature and pressure through the ideal-gas law and is not scored separately.
+For uncertainty, quote only the conformally calibrated intervals; the raw ensemble spreads are too narrow.
 
 ---
 
@@ -54,13 +57,13 @@ flowchart LR
 |---|---|---|---|
 | Data | `data` | 1 | Load the MRO CSV or generate a synthetic archive with the same columns and coverage |
 | Quality control | `data` | 2 | Drop levels with σ_T > 5 K (top initialisation zone), require monotonic height and ≥ 40 levels; recover the retrieval's molecular mass and the hydrostatic residual floor |
-| Split | `split` | 3 | Whole profiles → train / validation / test, stratified by Mars year |
+| Split | `split` | 3 | Contiguous 5° Ls blocks of whole profiles → train / validation / test within each Mars year; profiles within 1° Ls and 5° latitude of a test profile are dropped from training |
 | Gaps | `split` | 4 | Hide 2, 5, 10 or 20 km at the bottom, middle or top of each test profile |
 | Pre-train | `pretrain` | 5 | Train MLP (λ = 0) and PINN (λ > 0) ensembles on training profiles; fit EOF prior and random forest |
 | Tune | `tune` | 7 (button) | Choose L2-SP strength α and physics weight λ on validation profiles only |
 | Benchmark E1 | `e1` | 6, 7 | All methods on all test cases; profile-level bootstrap CIs; paired Wilcoxon tests with Holm correction |
-| Calibration | `calibrate` | 7 (button) | Split-conformal rescaling of predictive intervals, fitted on validation profiles |
-| E2, E3, E4 | `e2`, `e3`, `e4` | 8 | Noise robustness, physics-weight sensitivity, Mars-year hold-out |
+| Calibration | `calibrate` | 7 (button) | Mondrian split-conformal rescaling of predictive intervals per gap location and gap size, fitted on validation profiles with equal weight per case |
+| E2, E3, E4 | `e2`, `e3`, `e4` | 8 | Noise robustness, physics-weight sensitivity, Mars-year hold-out (the years cover different seasons and latitudes, so E4 tests extrapolation; the covered ranges are written to `year_holdout_coverage.csv`) |
 | Report | `report` | 9 | Figures (PNG/PDF), CSV and LaTeX tables, auto-generated results summary |
 
 ### Methods compared

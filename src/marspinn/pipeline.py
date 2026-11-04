@@ -92,7 +92,11 @@ class Pipeline:
 
     def step_split(self):
         cfg = self.cfg
-        tr, va, te = stratified_profile_split(self.meta, cfg["SPLIT_FRACS"], cfg["SPLIT_SEED"])
+        tr, va, te, n_drop = stratified_profile_split(self.meta, cfg["SPLIT_FRACS"], cfg["SPLIT_SEED"],
+                                                      cfg["SPLIT_BLOCK_LS"], cfg["SPLIT_BUFFER_LS"],
+                                                      cfg["SPLIT_BUFFER_LAT"])
+        self.log(f"Split by {cfg['SPLIT_BLOCK_LS']} deg Ls blocks; {n_drop} train/val profiles dropped as near neighbours")
+        self.R["split_buffer_dropped"] = n_drop
         assert not (set(tr) & set(va) or set(tr) & set(te) or set(va) & set(te))
         if cfg["MAX_TEST_PROFILES"]:
             te = te[:cfg["MAX_TEST_PROFILES"]]
@@ -175,15 +179,15 @@ class Pipeline:
         S_LOC = summarize(M, POINT_METRICS, by=("location", "method"), n_boot=nb)
         S_GAP = summarize(M, POINT_METRICS, by=("location", "gap_km", "method"), n_boot=nb)
         SIG = pd.concat([paired_tests(M, m, n_boot=nb, alpha=self.cfg["ALPHA"])
-                         for m in ["T_MAE", "P_relMAE", "n_relMAE"]], ignore_index=True)
+                         for m in ["T_MAE", "P_relMAE"]], ignore_index=True)
         SIG_LOC = pd.concat([paired_tests(M, m, by="location", n_boot=nb, alpha=self.cfg["ALPHA"])
-                             for m in ["T_MAE", "P_relMAE", "n_relMAE"]], ignore_index=True)
+                             for m in ["T_MAE", "P_relMAE"]], ignore_index=True)
         for name, d in [("summary_overall", S), ("summary_by_location", S_LOC), ("summary_by_gap", S_GAP),
                         ("significance_overall", SIG), ("significance_by_location", SIG_LOC)]:
             d.to_csv(self.tab / f"{name}.csv", index=False)
         self.PW, self.M = PW, M
         self.R.update(S_OVERALL=S, S_BY_LOC=S_LOC, S_BY_GAP=S_GAP, SIG=SIG, SIG_LOC=SIG_LOC)
-        self.log(S.set_index("method")[["n_profiles", "T_MAE", "T_within_2sig", "P_relMAE", "n_relMAE", "Hydro_RMS"]]
+        self.log(S.set_index("method")[["n_profiles", "T_MAE", "T_within_2sig", "P_relMAE", "Hydro_RMS"]]
                  .sort_values("T_MAE").round(3).to_string())
         uq_methods = [NAMES[k] for k in ("gp", "eof", "mlp_rft", "pinn_rft", "mlp_ft", "pinn_ft", "mlp_zs", "pinn_zs")]
         UQ = uncertainty_summary(M, PW, uq_methods, n_boot=nb)
@@ -214,7 +218,7 @@ class Pipeline:
                                        methods=["lin", "pchip", "hydro", "gp", "eof", "mlp_rft", "pinn_rft"],
                                        seeds_limit=cfg["NOISE_SEEDS"], eof=self.EOF)
         M = compute_metrics(PW, self.phys, keys=("case_id", "Profile_ID", "gap_km", "location", "noise_mult", "method"))
-        S = summarize(M, ["T_MAE", "P_relMAE", "n_relMAE"], by=("noise_mult", "method"), n_boot=cfg["N_BOOT"])
+        S = summarize(M, ["T_MAE", "P_relMAE"], by=("noise_mult", "method"), n_boot=cfg["N_BOOT"])
         S.to_csv(self.tab / "summary_noise.csv", index=False)
         self.R["S_NOISE"] = S
         self.log(S.pivot(index="method", columns="noise_mult", values="T_MAE").round(3).to_string())
@@ -229,18 +233,18 @@ class Pipeline:
                                                    f"pointwise_lambda_{lam}", methods=["pinn_ft"], seeds_limit=1))
         PW = pd.concat(parts, ignore_index=True)
         M = compute_metrics(PW, self.phys, keys=("case_id", "Profile_ID", "gap_km", "location", "lam_override", "method"))
-        S = summarize(M, ["T_MAE", "P_relMAE", "n_relMAE", "Hydro_RMS"], by=("location", "lam_override"),
+        S = summarize(M, ["T_MAE", "P_relMAE", "Hydro_RMS"], by=("location", "lam_override"),
                       n_boot=cfg["N_BOOT"])
         S.to_csv(self.tab / "summary_lambda.csv", index=False)
         self.R["S_LAM"] = S
-        self.log(S[["location", "lam_override", "T_MAE", "P_relMAE", "n_relMAE", "Hydro_RMS"]].round(4).to_string())
+        self.log(S[["location", "lam_override", "T_MAE", "P_relMAE", "Hydro_RMS"]].round(4).to_string())
 
     def step_e4(self):
         cfg = self.cfg
         methods = ["hydro", "gp", "eof", "rf", "mlp_zs", "pinn_zs", "mlp_rft", "pinn_rft"]
         seeds = cfg["SEEDS"][:cfg["HOLDOUT_SEEDS"]]
         lv, meta = self.lv, self.meta
-        parts = []
+        parts, cover = [], []
         for my in sorted(meta["Mars_Year"].unique()):
             test_ids = sorted(meta.index[meta["Mars_Year"] == my])[:cfg["HOLDOUT_MAX_TEST"]]
             rest = meta.index[meta["Mars_Year"] != my].values
@@ -251,6 +255,9 @@ class Pipeline:
             tr_h = lv[lv.Profile_ID.isin(rest[n_va:])]
             va_h = lv[lv.Profile_ID.isin(rest[:n_va])]
             te_h = lv[lv.Profile_ID.isin(test_ids)]
+            span = lambda ids, c: (round(float(meta.loc[ids, c].min()), 1), round(float(meta.loc[ids, c].max()), 1))
+            cover.append(dict(holdout_MY=int(my), test_lat=span(test_ids, "lat"), test_Ls=span(test_ids, "Solar_Long"),
+                              train_lat=span(rest, "lat"), train_Ls=span(rest, "Solar_Long")))
             norm_h = compute_norm(tr_h)
             base_h = {fam: [(s, self.nnt.pretrain(tr_h, va_h, fam, self.LAM[fam], s, tag=f"holdMY{int(my)}", norm=norm_h))
                             for s in seeds] for fam in self.LAM}
@@ -264,9 +271,15 @@ class Pipeline:
             return
         PW = pd.concat(parts, ignore_index=True)
         M = compute_metrics(PW, self.phys, keys=("case_id", "Profile_ID", "gap_km", "location", "holdout_MY", "method"))
-        S = summarize(M, ["T_MAE", "P_relMAE", "n_relMAE"], by=("holdout_MY", "method"), n_boot=cfg["N_BOOT"])
+        S = summarize(M, ["T_MAE", "P_relMAE"], by=("holdout_MY", "method"), n_boot=cfg["N_BOOT"])
         S.to_csv(self.tab / "summary_year_holdout.csv", index=False)
+        pd.DataFrame(cover).to_csv(self.tab / "year_holdout_coverage.csv", index=False)
         self.R["S_HOLD"] = S
+        # the Mars years sample different seasons and latitudes, so E4 measures extrapolation
+        # to an unseen part of (Ls, latitude) space rather than interannual variability alone
+        for c in cover:
+            self.log(f"MY{c['holdout_MY']} held out: lat {c['test_lat']}, Ls {c['test_Ls']} | "
+                     f"training lat {c['train_lat']}, Ls {c['train_Ls']}")
         self.log(S.pivot(index="method", columns="holdout_MY", values="T_MAE").round(3).to_string())
 
     # ------------------------------------------------------------------ report
@@ -308,11 +321,12 @@ class Pipeline:
             return f"{r[m]:.{d}f} [{r[m + '_lo']:.{d}f}, {r[m + '_hi']:.{d}f}]"
         order = [o for o in plots.ORDER if o in set(R["S_OVERALL"].method)]
         main = R["S_OVERALL"].set_index("method").reindex(order)
-        lines = [r"\begin{tabular}{lccccc}", r"\toprule",
-                 r"Method & T MAE (K) & within $2\sigma_T$ & P error (\%) & $n$ error (\%) & Hydro.\ residual \\", r"\midrule"]
+        floor = self.phys.floor
+        lines = [r"\begin{tabular}{lcccc}", r"\toprule",
+                 r"Method & T MAE (K) & within $2\sigma_T$ & P error (\%) & Hydro.\ residual / floor \\", r"\midrule"]
         for m, r in main.iterrows():
             lines.append(f"{m} & {ci(r, 'T_MAE')} & {r['T_within_2sig']:.2f} & {ci(r, 'P_relMAE')} & "
-                         f"{ci(r, 'n_relMAE')} & {r['Hydro_RMS']:.3g} \\\\")
+                         f"{r['Hydro_RMS'] / floor:.2f} \\\\")
         lines += [r"\bottomrule", r"\end{tabular}"]
         (self.tab / "table1_main_results.tex").write_text("\n".join(lines).replace("%", r"\%").replace(r"\\%", r"\%"))
 
@@ -332,9 +346,16 @@ class Pipeline:
             lines.append(f"Lowest temperature MAE: {best.method} ({best.T_MAE:.2f} K).")
             if OURS in o.index:
                 r = o.loc[OURS]
-                lines.append(f"{OURS}: T MAE {r.T_MAE:.2f} K, P error {r.P_relMAE:.2f} %, n error {r.n_relMAE:.2f} %, "
-                             f"hydrostatic residual {r.Hydro_RMS:.3g}.")
-            for met, lab in [("T_MAE", "temperature"), ("P_relMAE", "pressure"), ("n_relMAE", "density")]:
+                lines.append(f"{OURS}: T MAE {r.T_MAE:.2f} K, P error {r.P_relMAE:.2f} %, "
+                             f"hydrostatic residual {r.Hydro_RMS / self.phys.floor:.2f} x the data floor.")
+                h = NAMES["hydro"]
+                if h in o.index:
+                    # the reference pressure is itself hydrostatic, so the fair pressure baseline
+                    # is hydrostatic integration of the observed T, not a statistical interpolator
+                    lines.append(f"Pressure against {h}: {o.loc[h].P_relMAE:.2f} % -> {r.P_relMAE:.2f} %. "
+                                 "The MRO retrieval imposes hydrostatic balance, so pressure is not an independent test "
+                                 "of the physics; density follows from T and P and is not scored separately.")
+            for met, lab in [("T_MAE", "temperature"), ("P_relMAE", "pressure")]:
                 s = SIG[SIG.metric == met] if len(SIG) else SIG
                 if not len(s):
                     continue

@@ -73,22 +73,52 @@ def physics_audit(lv: pd.DataFrame, phys: Physics) -> dict:
 
 
 # --------------------------------------------------------------------------- splits
-def stratified_profile_split(meta: pd.DataFrame, fracs, seed):
-    """Whole profiles go to train / val / test, stratified by Mars year (no leakage)."""
+def stratified_profile_split(meta: pd.DataFrame, fracs, seed, block_ls=5.0, buffer_ls=1.0, buffer_lat=5.0):
+    """Whole profiles go to train / val / test, stratified by Mars year.
+
+    Neighbouring occultations are only ~1 deg of Ls apart, so a random profile split puts near-copies of
+    each test profile in training. Profiles are therefore grouped into contiguous Ls blocks of
+    ``block_ls`` degrees, whole blocks are assigned to test, then validation, then training, and any
+    train/val profile closer than ``buffer_ls`` in Ls and ``buffer_lat`` in latitude to a profile of a
+    later split (val or test) in the same year is dropped. Returns (train, val, test, n_dropped).
+    """
     rng = np.random.default_rng(seed)
-    tr, va, te = [], [], []
+    tr, va, te, dropped = [], [], [], 0
     for _, g in meta.groupby("Mars_Year"):
-        ids = list(rng.permutation(g.index.values))
-        n = len(ids)
+        n = len(g)
         if n < 3:
-            tr += ids
+            tr += list(g.index)
             continue
-        n_te = max(1, int(round(fracs[2] * n)))
-        n_va = max(1, int(round(fracs[1] * n)))
-        te += ids[:n_te]
-        va += ids[n_te:n_te + n_va]
-        tr += ids[n_te + n_va:]
-    return sorted(tr), sorted(va), sorted(te)
+        blocks = np.floor(g["Solar_Long"].values / block_ls).astype(int)
+        order = rng.permutation(np.unique(blocks))
+        targets = [max(1, int(round(fracs[2] * n))), max(1, int(round(fracs[1] * n)))]
+        parts, k = [[], [], []], 0
+        for b in order:
+            ids = list(g.index[blocks == b])
+            # move on once the split is full, or when this block would overshoot more than it fills
+            while k < 2 and (len(parts[k]) >= targets[k]
+                             or (parts[k] and len(parts[k]) + len(ids) - targets[k] > targets[k] - len(parts[k]))):
+                k += 1
+            parts[k] += ids
+        te_y, va_y, tr_y = parts
+
+        def near(ids, ref):
+            if not ref:
+                return []
+            a, r = g.loc[ids], g.loc[ref]
+            dls = np.abs(((a["Solar_Long"].values[:, None] - r["Solar_Long"].values[None, :]) + 180) % 360 - 180)
+            dlat = np.abs(a["lat"].values[:, None] - r["lat"].values[None, :])
+            return [i for i, hit in zip(ids, ((dls < buffer_ls) & (dlat < buffer_lat)).any(1)) if hit]
+
+        drop_va = near(va_y, te_y)
+        va_y = [i for i in va_y if i not in drop_va]
+        drop_tr = near(tr_y, te_y + va_y)
+        tr_y = [i for i in tr_y if i not in drop_tr]
+        dropped += len(drop_va) + len(drop_tr)
+        tr += tr_y
+        va += va_y
+        te += te_y
+    return sorted(tr), sorted(va), sorted(te), dropped
 
 
 # --------------------------------------------------------------------------- gaps

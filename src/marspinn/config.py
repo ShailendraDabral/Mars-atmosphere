@@ -28,6 +28,9 @@ DEFAULTS: dict = dict(
     # ---- splits ----
     SPLIT_FRACS=[0.70, 0.15, 0.15],
     SPLIT_SEED=2024,
+    SPLIT_BLOCK_LS=5.0,     # whole Ls blocks go to one split
+    SPLIT_BUFFER_LS=1.0,    # drop train/val profiles this close (Ls and latitude) to a later split
+    SPLIT_BUFFER_LAT=5.0,
 
     # ---- gap scenarios ----
     GAP_SIZES_KM=[2, 5, 10, 20],
