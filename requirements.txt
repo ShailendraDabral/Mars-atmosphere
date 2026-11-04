@@ -1,3 +1,4 @@
+# Runtime dependencies (same as pyproject.toml). For development: pip install -e ".[dev]"
 numpy>=1.23
 pandas>=1.5
 scipy>=1.9
@@ -5,4 +6,3 @@ scikit-learn>=1.1
 matplotlib>=3.6
 torch>=2.0
 pyyaml>=6.0
-pytest>=7
