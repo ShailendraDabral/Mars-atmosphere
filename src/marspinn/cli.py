@@ -28,6 +28,8 @@ def _cfg(args):
     if getattr(args, "out", None) and args.cmd == "run":
         cfg["OUTPUT_DIR"] = args.out
     if getattr(args, "quick", False):
+        if not getattr(args, "out", None):
+            cfg["OUTPUT_DIR"] = "results/quick"
         cfg.update(GAP_SIZES_KM=[5, 10], GAP_LOCATIONS=["middle", "upper"], SEEDS=[0, 1], MAX_TEST_PROFILES=5,
                    PRETRAIN_EPOCHS=300, FINETUNE_STEPS=100, NOISE_SEEDS=2, HOLDOUT_SEEDS=2, HOLDOUT_MAX_TEST=4,
                    LAMBDAS=[0.0, 1.0, 10.0], N_BOOT=500, TUNE_ALPHAS=[0.0, 1.0], TUNE_LAMBDAS=[1.0],
@@ -39,9 +41,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(prog="marspinn", description="Physics-informed gap reconstruction of Mars RO profiles")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def common(sp):
+    def common(sp, data=True):
         sp.add_argument("--config", help="YAML config file (defaults are used for missing keys)")
         sp.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="override config entries")
+        if not data:
+            return
         sp.add_argument("--data", choices=["synthetic", "csv"], help="data source")
         sp.add_argument("--csv", help="path to mro_tps_combined.csv (implies --data csv)")
 
@@ -53,7 +57,7 @@ def main(argv=None):
     r.add_argument("-q", "--quiet", action="store_true")
 
     s = sub.add_parser("synth", help="write a synthetic dataset in the MRO TPS CSV format")
-    common(s)
+    common(s, data=False)
     s.add_argument("--out", default="data/synthetic_tps.csv")
 
     a = sub.add_parser("audit", help="load data, apply QC and print the physics audit")

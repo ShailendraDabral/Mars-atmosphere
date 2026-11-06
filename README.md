@@ -38,6 +38,9 @@ reconstructions markedly more accurate and physically self-consistent than an id
 not determined by hydrostatics: the best temperature skill comes from statistical priors learned across profiles
 (EOF optimal interpolation, 2.78 K MAE), and the PINN is statistically indistinguishable from it. Split-conformal
 calibration on validation profiles brings the PINN's 95 % intervals from 73 % to 92 % empirical coverage.
+Because the MRO retrieval itself derives pressure by hydrostatic integration, the fair pressure baseline is
+hydrostatic integration of the observed temperature, and the summary reports the PINN against it. For uncertainty,
+quote only the conformally calibrated intervals; the raw ensemble spreads are too narrow.
 
 <p align="center">
   <img src="results/figures/fig03_error_vs_gap_size.png" width="92%" alt="Reconstruction error versus gap size and location for all methods">
@@ -124,7 +127,7 @@ data-only MLP. α and λ are selected on validation profiles only.
 ```mermaid
 flowchart LR
   A[MRO RSS profiles] --> B[Quality control<br/>+ physics audit]
-  B --> C[Profile-level split<br/>train / val / test]
+  B --> C[Profile-level split by 5° Ls blocks<br/>train / val / test]
   C --> D[Gap scenarios<br/>2–20 km × lower / middle / upper]
   C --> E[Pre-train MLP + PINN ensembles<br/>fit EOF prior, RF]
   E --> F[Tune α, λ on validation]
@@ -142,10 +145,11 @@ flowchart LR
 | **E1** Main benchmark | Accuracy and physical consistency of all methods across gap sizes and locations |
 | **E2** Noise robustness | Sensitivity to added retrieval noise (0, 2σ, 5σ) on the observed levels |
 | **E3** Physics-weight sweep | Effect of λ ∈ {0, 0.01, …, 100} |
-| **E4** Mars-year hold-out | Transfer to an unseen observing campaign |
+| **E4** Mars-year hold-out | Transfer to an unseen observing campaign (the years cover different seasons and latitudes; the covered ranges are written to `year_holdout_coverage.csv`) |
 
 Statistics: profile-level bootstrap CIs (5000 resamples), paired Wilcoxon signed-rank tests with Holm correction,
-split-conformal calibration of predictive intervals on validation profiles.
+Mondrian split-conformal calibration of predictive intervals per gap location and gap size, fitted on validation
+profiles with equal weight per case.
 
 ## Repository structure
 
@@ -267,6 +271,7 @@ YAML files or `--set KEY=VALUE` override individual entries.
 | `DATA_LEVELS` | `data/processed/mro_tps_combined.csv` | input CSV when `DATA_SOURCE: csv` |
 | `SIGMA_T_MAX`, `MIN_LEVELS` | `5.0`, `40` | quality control |
 | `SPLIT_FRACS`, `SPLIT_SEED` | `[0.7, 0.15, 0.15]`, `2024` | profile-level split |
+| `SPLIT_BLOCK_LS`, `SPLIT_BUFFER_LS`, `SPLIT_BUFFER_LAT` | `5.0`, `1.0`, `5.0` | whole Ls blocks go to one split; train/val profiles this close to a test profile are dropped |
 | `GAP_SIZES_KM`, `GAP_LOCATIONS` | `[2, 5, 10, 20]`, all three | gap scenarios |
 | `SEEDS` | `[0, 1, 2, 3, 4]` | ensemble members |
 | `HIDDEN`, `DEPTH` | `64`, `4` | network size |

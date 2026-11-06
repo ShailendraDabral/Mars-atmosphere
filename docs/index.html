@@ -528,13 +528,13 @@ footer.site a { color: var(--muted); }
     <div class="grid2">
       <div class="card">
         <div class="row"><h3>Error against gap size</h3>
-          <label class="field"><span>Metric</span><select id="gsMetric"><option value="T_MAE">Temperature MAE (K)</option><option value="P_relMAE">Pressure error (%)</option><option value="n_relMAE">Density error (%)</option></select></label>
+          <label class="field"><span>Metric</span><select id="gsMetric"><option value="T_MAE">Temperature MAE (K)</option><option value="P_relMAE">Pressure error (%)</option></select></label>
           <label class="field"><span>Location</span><select id="gsLoc"></select></label></div>
         <div class="chart" id="chGapSize"></div>
       </div>
       <div class="card">
         <div class="row"><h3>Paired tests against the PINN</h3>
-          <label class="field"><span>Metric</span><select id="sigMetric"><option value="T_MAE">Temperature MAE</option><option value="P_relMAE">Pressure error</option><option value="n_relMAE">Density error</option></select></label></div>
+          <label class="field"><span>Metric</span><select id="sigMetric"><option value="T_MAE">Temperature MAE</option><option value="P_relMAE">Pressure error</option></select></label></div>
         <div class="tbl" id="tblSig"><div class="empty">Needs the benchmark.</div></div>
       </div>
     </div>
@@ -853,7 +853,7 @@ async function stepSplit() {
   const rows = ["train", "val", "test"].map((g) => { const r = { g: { train: "Training", val: "Validation", test: "Test" }[g], total: st.split[g].length }; years.forEach((y) => (r["y" + y] = st.split[g].filter((id) => st.byId[id].my === y).length)); return r; });
   table($("tblSplit"), [{ key: "g", label: "Group" }, ...years.map((y) => ({ key: "y" + y, label: `MY ${y}` })), { key: "total", label: "Profiles" }], rows);
   $("gapProfile").innerHTML = st.split.test.map((id) => `<option value="${id}">${id} · MY ${st.byId[id].my} · Ls ${f(st.byId[id].ls, 0)}° · ${f(st.byId[id].lat, 0)}°</option>`).join("");
-  log(`Split: ${st.split.train.length} train / ${st.split.val.length} validation / ${st.split.test.length} test profiles.`);
+  log(`Split: ${st.split.train.length} train / ${st.split.val.length} validation / ${st.split.test.length} test profiles in 5° Ls blocks; ${st.split.dropped} near-neighbour profiles dropped.`);
   markDone("split"); drawGap(); markDone("gaps");
 }
 
@@ -964,7 +964,7 @@ function drawRecon() {
   table($("tblRecon"), [
     { key: "method", label: "Method" }, { key: "T_MAE", label: "T MAE (K)", fmt: (v) => f(v), best: "min" },
     { key: "T_within_2sig", label: "Within 2σ", fmt: (v) => f(v), best: "max" }, { key: "P_relMAE", label: "P error (%)", fmt: (v) => f(v), best: "min" },
-    { key: "n_relMAE", label: "n error (%)", fmt: (v) => f(v), best: "min" }, { key: "Hydro_RMS", label: "Hydro. residual", fmt: (v) => fp(v), best: "min" },
+    { key: "Hydro_RMS", label: "Hydro. residual", fmt: (v) => fp(v), best: "min" },
   ], rows, { rowClass: (r) => (r.k === "pinn_rft" ? "ours" : "") });
 }
 
@@ -986,7 +986,7 @@ async function runCases(cases, opts, onRow) {
   }
   return rows;
 }
-const POINT = ["T_MAE", "T_within_2sig", "P_relMAE", "n_relMAE", "Hydro_RMS"];
+const POINT = ["T_MAE", "T_within_2sig", "P_relMAE", "Hydro_RMS"];
 async function stepBench() {
   if (!st.nets) await stepTrain();
   const sizes = [2, 5, 10, 20].filter((s) => $("bs-" + s).checked), locs = ["lower", "middle", "upper"].filter((l) => $("bl-" + l).checked);
@@ -1006,7 +1006,7 @@ function drawBench() {
   table($("tblBench"), [
     { key: "method", label: "Method" }, { key: "T_MAE", label: "T MAE (K)", fmt: ciFmt("T_MAE"), best: "min" },
     { key: "T_within_2sig", label: "Within 2σ", fmt: (v) => f(v), best: "max" }, { key: "P_relMAE", label: "P error (%)", fmt: ciFmt("P_relMAE"), best: "min" },
-    { key: "n_relMAE", label: "n error (%)", fmt: ciFmt("n_relMAE"), best: "min" }, { key: "Hydro_RMS", label: "Hydro. residual", fmt: (v) => fp(v), best: "min" },
+    { key: "Hydro_RMS", label: "Hydro. residual", fmt: (v) => fp(v), best: "min" },
   ], sum, { rowClass: (r) => (r.method === S.OURS ? "ours" : "") });
   $("benchInfo").textContent = `${b.cases} cases · ${b.profiles} test profiles · hydrostatic floor ${f(S.phys.floor, 4)}`;
   $("gsLoc").innerHTML = b.locs.map((l) => `<option value="${l}">${l}</option>`).join("");
@@ -1320,7 +1320,7 @@ async function gmReveal() {
   const extra = pinn ? ` The physics-informed network scored ${f(pinn.T_MAE)} K.` : " Pre-train the networks in step 5 to add the MLP and PINN to the scoreboard.";
   $("gmResult").innerHTML = `<div class="verdict ${rank === 1 ? "win" : ""}"><div class="score">${score}<small>points</small></div><div><b>${msg}</b><br><span class="lede">Your temperature error ${f(you.T_MAE)} K; your pressure error ${f(you.P_relMAE)} %, from hydrostatic balance alone.${extra}</span></div></div><div class="tbl" id="tblGame"></div>`;
   table($("tblGame"), [{ key: "name", label: "Rank" , fmt: (v, x) => `${rows.indexOf(x) + 1}. ${v}` }, { key: "T_MAE", label: "T MAE (K)", fmt: (v) => f(v), best: "min" },
-    { key: "P_relMAE", label: "P error (%)", fmt: (v) => f(v), best: "min" }, { key: "n_relMAE", label: "n error (%)", fmt: (v) => f(v), best: "min" }], rows, { rowClass: (x) => (x.k === "you" ? "you" : x.k === "pinn_rft" ? "ours" : "") });
+    { key: "P_relMAE", label: "P error (%)", fmt: (v) => f(v), best: "min" }], rows, { rowClass: (x) => (x.k === "you" ? "you" : x.k === "pinn_rft" ? "ours" : "") });
   const s = gmStore(); s.rounds = (s.rounds || 0) + 1; s.points = (s.points || 0) + score; s.wins = (s.wins || 0) + (rank === 1 ? 1 : 0); s.best = Math.min(s.best || Infinity, you.T_MAE); gmSave(s);
   if (rank === 1) celebrate();
   log(`Gap challenge: ${R.p.id}, ${R.size} km ${R.loc}; you ${f(you.T_MAE)} K, rank ${rank}/${rows.length}.`);

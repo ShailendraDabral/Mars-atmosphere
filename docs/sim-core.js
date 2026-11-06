@@ -166,7 +166,7 @@
 
   function correlatedNoise(rng, z, corr) {
     const n = z.length, C = new Float64Array(n * n);
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) C[i * n + j] = Math.exp(-0.5 * ((z[i] - z[j]) / corr) ** 2) + (i === j ? 1e-6 : 0);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) C[i * n + j] = Math.exp(-0.5 * ((z[i] - z[j]) / corr) ** 2) + (i === j ? 1e-8 : 0);
     const L = cholesky(C, n), e = Array.from({ length: n }, () => rng.normal());
     return Array.from({ length: n }, (_, i) => { let s = 0; for (let k = 0; k <= i; k++) s += L[i * n + k] * e[k]; return s; });
   }
@@ -214,16 +214,18 @@
   }
 
   // ------------------------------------------------------------------ real CSV
+  // split one CSV line, keeping commas that sit inside double quotes
+  const splitCSV = (l) => (l.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || []).slice(0, -1).map((f) => f.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"'));
   function parseCSV(text) {
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
-    const head = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+    const head = splitCSV(lines[0]).map((h) => h.trim().replace(/^"|"$/g, ""));
     const need = ["Profile_ID", "Mars_Year", "Solar_Long", "Radius", "Latitude", "Longitude", "Geopotential", "Pressure", "Sigma_P", "Temperature", "Sigma_T", "Number_Density"];
     const miss = need.filter((c) => !head.includes(c));
     if (miss.length) throw new Error("The CSV is missing these columns: " + miss.join(", "));
     const col = Object.fromEntries(head.map((h, i) => [h, i]));
     const groups = new Map();
     for (let r = 1; r < lines.length; r++) {
-      const c = lines[r].split(",");
+      const c = splitCSV(lines[r]);
       const id = c[col.Profile_ID].replace(/^"|"$/g, "");
       if (!groups.has(id)) groups.set(id, []);
       groups.get(id).push(c);
@@ -295,17 +297,29 @@
   }
 
   // ------------------------------------------------------------------ splits and gaps
-  function stratifiedSplit(profiles, fracs, seed) {
+  // whole Ls blocks go to test, then validation, then training; train/val profiles within bufferLs of Ls and
+  // bufferLat of latitude of a later split in the same year are dropped (neighbouring occultations are ~1 deg apart)
+  function stratifiedSplit(profiles, fracs, seed, blockLs = 5, bufferLs = 1, bufferLat = 5) {
     const rng = RNG(seed), byYear = new Map();
-    for (const p of profiles) { if (!byYear.has(p.my)) byYear.set(p.my, []); byYear.get(p.my).push(p.id); }
-    const tr = [], va = [], te = [];
+    for (const p of profiles) { if (!byYear.has(p.my)) byYear.set(p.my, []); byYear.get(p.my).push(p); }
+    const tr = [], va = [], te = []; let dropped = 0;
     for (const my of [...byYear.keys()].sort()) {
-      const ids = rng.permutation(byYear.get(my).sort()), n = ids.length;
-      if (n < 3) { tr.push(...ids); continue; }
-      const nte = Math.max(1, Math.round(fracs[2] * n)), nva = Math.max(1, Math.round(fracs[1] * n));
-      te.push(...ids.slice(0, nte)); va.push(...ids.slice(nte, nte + nva)); tr.push(...ids.slice(nte + nva));
+      const ps = byYear.get(my).sort((a, b) => (a.id < b.id ? -1 : 1)), n = ps.length;
+      if (n < 3) { tr.push(...ps.map((p) => p.id)); continue; }
+      const blk = (p) => Math.floor(p.ls / blockLs), blocks = rng.permutation([...new Set(ps.map(blk))].sort((a, b) => a - b));
+      const targets = [Math.max(1, Math.round(fracs[2] * n)), Math.max(1, Math.round(fracs[1] * n))], parts = [[], [], []];
+      let k = 0;
+      for (const b of blocks) {
+        const ids = ps.filter((p) => blk(p) === b);
+        while (k < 2 && (parts[k].length >= targets[k] || (parts[k].length && parts[k].length + ids.length - targets[k] > targets[k] - parts[k].length))) k++;
+        parts[k].push(...ids);
+      }
+      const near = (p, ref) => ref.some((r) => Math.abs(((p.ls - r.ls + 540) % 360) - 180) < bufferLs && Math.abs(p.lat - r.lat) < bufferLat);
+      const [teY, va0] = parts, vaY = va0.filter((p) => !near(p, teY)), trY = parts[2].filter((p) => !near(p, [...teY, ...vaY]));
+      dropped += va0.length - vaY.length + parts[2].length - trY.length;
+      te.push(...teY.map((p) => p.id)); va.push(...vaY.map((p) => p.id)); tr.push(...trY.map((p) => p.id));
     }
-    return { train: tr.sort(), val: va.sort(), test: te.sort() };
+    return { train: tr.sort(), val: va.sort(), test: te.sort(), dropped };
   }
   function makeGap(z, size, loc, minObs = 5) {
     const z0 = z[0], z1 = z[z.length - 1];
@@ -718,7 +732,6 @@
       T_MAE: mean(eT.map(Math.abs)), T_RMSE: Math.sqrt(mean(eT.map((v) => v * v))), T_bias: mean(eT),
       T_within_2sig: mean(eT.map((v, i) => (Math.abs(v) <= 2 * ref.sigT[i] ? 1 : 0))),
       P_relMAE: 100 * mean(eP.map((v) => Math.abs(Math.exp(v) - 1))),
-      n_relMAE: 100 * mean(eP.map((v, i) => Math.abs(Math.exp(v) * ref.T[i] / pr.T[i] - 1))),
       Hydro_RMS: n >= 3 ? rms(hydroResidual(ref.z, pr.T, pr.P)) : NaN,
     };
     if (pr.sT && pr.sT.every(Number.isFinite)) {
@@ -785,21 +798,28 @@
     o.forEach((idx, k) => { run = Math.max(run, Math.min(1, (out.length - k) * out[idx].p_wilcoxon)); out[idx].p_holm = run; out[idx].significant = run < alpha; });
     return out;
   }
-  // split conformal: per (method, location, var) the ceil((n+1)q)/n quantile of normalised scores
+  // split conformal (Mondrian): per (method, location) and per (method, location, gap size);
+  // each case carries equal weight and the finite-sample correction uses the number of cases
   function fitConformal(rows) {
     const Q = {}, groups = new Map();
-    for (const r of rows) { if (!r.scoresT) continue; const k = r.method + "|" + r.location; if (!groups.has(k)) groups.set(k, { T: [], P: [] }); groups.get(k).T.push(...r.scoresT); groups.get(k).P.push(...r.scoresP); }
+    const add = (k, r) => { if (!groups.has(k)) groups.set(k, { T: [], P: [], n: 0 }); const g = groups.get(k), w = 1 / r.scoresT.length; g.n++; r.scoresT.forEach((s) => g.T.push([s, w])); r.scoresP.forEach((s) => g.P.push([s, w])); };
+    for (const r of rows) { if (!r.scoresT) continue; add(r.method + "|" + r.location, r); add(r.method + "|" + r.location + "|" + r.gap_km, r); }
     for (const [k, g] of groups) for (const v of ["T", "P"]) {
-      const s = g[v].slice().sort((a, b) => a - b), n = s.length;
-      for (const q of COV) { const lvl = Math.min(1, Math.ceil((n + 1) * q) / n); Q[`${k}|${v}|${q}`] = quantile(s, lvl); }
+      const s = g[v].slice().sort((a, b) => a[0] - b[0]), W = s.reduce((t, x) => t + x[1], 0);
+      for (const q of COV) {
+        const lvl = Math.min(1, Math.ceil((g.n + 1) * q) / g.n) - 1e-12; let c = 0, i = 0;
+        for (; i < s.length - 1; i++) { c += s[i][1] / W; if (c >= lvl) break; }
+        Q[`${k}|${v}|${q}`] = s[i][0];
+      }
     }
     return Q;
   }
   function conformalCoverage(rows, Q) {
     for (const r of rows) {
       if (!r.scoresT) continue;
+      const kg = `${r.method}|${r.location}|${r.gap_km}`, k = Q[`${kg}|T|0.95`] !== undefined ? kg : `${r.method}|${r.location}`;
       for (const q of COV) for (const v of ["T", "P"]) {
-        const c = Q[`${r.method}|${r.location}|${v}|${q}`];
+        const c = Q[`${k}|${v}|${q}`];
         if (c === undefined) continue;
         r[`${v}_ccov${q * 100}`] = mean(r[v === "T" ? "scoresT" : "scoresP"].map((s) => (s <= c ? 1 : 0)));
       }

@@ -83,9 +83,9 @@ def fig_examples(PW, test_df, test_ids, folder):
 
 
 def fig_gap_size(S_BY_GAP, locations, folder):
-    fig, axes = plt.subplots(3, len(locations), figsize=(5 * len(locations), 11), squeeze=False)
+    fig, axes = plt.subplots(2, len(locations), figsize=(5 * len(locations), 7.5), squeeze=False)
     for j, loc in enumerate(locations):
-        for i, (met, lab) in enumerate([("T_MAE", "T MAE (K)"), ("P_relMAE", "P error (%)"), ("n_relMAE", "n error (%)")]):
+        for i, (met, lab) in enumerate([("T_MAE", "T MAE (K)"), ("P_relMAE", "P error (%)")]):
             ax = axes[i, j]
             for m in [o for o in ORDER if o not in (NAMES["mlp_ft"], NAMES["pinn_ft"])]:
                 s = S_BY_GAP[(S_BY_GAP.location == loc) & (S_BY_GAP.method == m)].sort_values("gap_km")
@@ -142,8 +142,8 @@ def fig_calibration(PW, Q, folder):
 
 
 def fig_paired(SIG, folder):
-    mets = ["T_MAE", "P_relMAE", "n_relMAE"]
-    fig, ax = plt.subplots(1, 3, figsize=(15, 4.5))
+    mets = ["T_MAE", "P_relMAE"]
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.5))
     for a, met in zip(ax, mets):
         s = SIG[SIG.metric == met].set_index("competitor").reindex([o for o in ORDER if o != OURS]).dropna(subset=["mean_diff"])
         y = np.arange(len(s))
